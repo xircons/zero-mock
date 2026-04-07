@@ -1,0 +1,32 @@
+# zero-mock — project rules
+
+## TypeScript
+
+- Enable and honor **strict** mode (`strict`, and related checks). Prefer explicit types at module boundaries (exported functions, public APIs).
+- Avoid `any`; use `unknown` with narrowing or proper generics when the type is genuinely dynamic.
+
+## Module system
+
+- Emit and consume **CommonJS** only. Do not set `"type": "module"` in `package.json`.
+- Compiled output uses `require` / `module.exports` as produced by `tsc` with `"module": "CommonJS"`.
+
+## File I/O
+
+- Use **`fs/promises`** for asynchronous file operations by default.
+- Avoid synchronous `fs.*` except where there is a clear, documented reason (e.g. one-shot CLI bootstrap that must run before anything else).
+
+## Architecture (layering)
+
+Organize code in a **modular pipeline**:
+
+1. **CLI** — argument parsing, help text, process exit codes; thin entry that delegates inward.
+2. **Config** — resolved options (paths, port, flags) validated and normalized for the rest of the app.
+3. **Store** — persistence: read/write the backing JSON; the single place that knows file path and serialization.
+4. **Server** — HTTP server, routing, request/response mapping to Store operations.
+
+New features should extend the appropriate layer instead of coupling CLI directly to HTTP or ad-hoc file access.
+
+## Data persistence
+
+- The **source JSON file** is the system of record. All durable state flows through **Store** and is written back to that file.
+- Do not keep authoritative state only in memory unless the design explicitly documents divergence, sync, or ephemeral behavior.
