@@ -27,4 +27,6 @@ Thumbs.db
 test-db.json
 *.local.json
 
-# .claude/
+# Cursor / Claude (local-only)
+.cursorrules
+.claude/
