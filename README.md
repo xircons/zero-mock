@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?logo=typescript&logoColor=white)](tsconfig.json)
-[![npm version](https://img.shields.io/npm/v/@xircons/zero-mock.svg)](https://www.npmjs.com/package/@xircons/zero-mock)
+[![npm version](https://img.shields.io/npm/v/@xirconsss/zero-mock.svg)](https://www.npmjs.com/package/@xirconsss/zero-mock)
 
 **zero-mock** is a zero-config Node.js CLI that turns a JSON file into a local REST API. Point it at a file whose top-level keys are **collection names** and whose values are **arrays of records**—it serves full CRUD routes and writes changes back to disk. Built for **frontend developers** who need a quick, realistic backend for prototypes, demos, and integration tests without standing up a database or bespoke server.
 
@@ -11,7 +11,7 @@
 ### Global
 
 ```bash
-npm install -g @xircons/zero-mock
+npm install -g @xirconsss/zero-mock
 ```
 
 Run the CLI as **`zero-mock`** (see [Usage](#usage)).
@@ -19,17 +19,17 @@ Run the CLI as **`zero-mock`** (see [Usage](#usage)).
 ### One-off with npx
 
 ```bash
-npx @xircons/zero-mock -f ./data.json -p 3000
+npx @xirconsss/zero-mock -f ./data.json -p 3000
 ```
 
-Flags: **`-f`** / **`--file`** (required JSON path), **`-p`** / **`--port`** (optional, default `3000`). If your shell or npm version forwards extra flags to npm instead of the CLI, insert **`--`** before **`-f`** (e.g. `npx @xircons/zero-mock -- -f ./data.json`).
+Flags: **`-f`** / **`--file`** (required JSON path), **`-p`** / **`--port`** (optional, default `3000`). If your shell or npm version forwards extra flags to npm instead of the CLI, insert **`--`** before **`-f`** (e.g. `npx @xirconsss/zero-mock -- -f ./data.json`).
 
 ## Quick start
 
 From the repo root (or any directory containing the example file):
 
 ```bash
-npx @xircons/zero-mock -f ./example/db.json -p 3000
+npx @xirconsss/zero-mock -f ./example/db.json -p 3000
 ```
 
 In another terminal:
