@@ -19,6 +19,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # If npm Trusted Publisher specifies a GitHub Environment, this name must match exactly (secrets not required for OIDC).
+    environment: NPM_TOKEN
 
     steps:
       - uses: actions/checkout@v5

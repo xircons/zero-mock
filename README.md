@@ -85,11 +85,17 @@ The root must be a JSON **object**. Each property must be an **array** (your “
 1. Open **`@xirconsss/zero-mock`** on [npmjs.com](https://www.npmjs.com/package/@xirconsss/zero-mock) → **Settings** (or **Publishing access**) → **Trusted publishing** / **Trusted Publisher** → **GitHub Actions**.
 2. Set **Repository** to **`xircons/zero-mock`** (must match `repository.url` in `package.json`).
 3. Set **Workflow filename** to exactly **`publish-npm.yml`** (name and extension must match the file in this repo).
-4. Save. Then run the workflow from the **Actions** tab.
+4. **Environment (optional on npm):** If npm asks for a GitHub **Environment** name, use **`NPM_TOKEN`** so it matches the workflow job’s `environment:` (the environment does not need any secrets for OIDC). If you leave Environment **empty** on npm, remove the `environment: NPM_TOKEN` line from the workflow instead—npm checks that these match.
+5. Save. Then run the workflow from the **Actions** tab.
 
 Requires **npm CLI ≥ 11.5.1** and **Node ≥ 22.14** on the runner (the workflow upgrades npm and uses Node 22.14+).
 
-**If you cannot use trusted publishing:** you can switch the workflow back to token auth with an **[Automation](https://docs.npmjs.com/creating-and-viewing-access-tokens#creating-classic-tokens)** (classic) token or a granular token with **Bypass 2FA**—never use **`NPM_OTP`** secrets (codes expire in ~30 seconds).
+**Troubleshooting CI**
+
+- **`E404` / `PUT ... Not found` on `npm publish`:** Usually **trusted publishing** is missing or **does not match** this repo (owner/repo, workflow filename, or environment name). Re-check the package’s **Trusted publishing** settings on npm. See [npm troubleshooting](https://docs.npmjs.com/trusted-publishers#troubleshooting).
+- **`EOTP` with a granular token:** Enable **Bypass two-factor authentication (2FA)** on that token in npm **Access Tokens**, or use a classic **Automation** token for CI.
+
+**If you cannot use trusted publishing:** switch the workflow back to token auth with an **[Automation](https://docs.npmjs.com/creating-and-viewing-access-tokens#creating-classic-tokens)** (classic) token or a granular token with **Bypass 2FA**—never use **`NPM_OTP`** secrets (codes expire in ~30 seconds).
 
 ## License
 
