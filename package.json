@@ -41,6 +41,7 @@
   "bugs": {
     "url": "https://github.com/xircons/zero-mock/issues"
   },
+  "homepage": "https://github.com/xircons/zero-mock#readme",
   "dependencies": {
     "commander": "^13.1.0",
     "cors": "^2.8.5",

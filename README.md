@@ -41,6 +41,10 @@ curl http://localhost:3000/users/1
 
 The server logs the exact URLs for each collection when it starts.
 
+## Development
+
+From a clone: `npm install`, then `npm run build` (or `npm run dev` with `ts-node`). Run the built CLI with `node dist/index.js -f ./example/db.json -p 3000`.
+
 ## Features
 
 - **Zero-config** — one JSON file defines your API surface; no schemas or generators to run.
@@ -66,6 +70,15 @@ Invalid JSON bodies (non-objects for write routes) receive **`400`** with a JSON
 ## JSON file shape
 
 The root must be a JSON **object**. Each property must be an **array** (your “tables”). Each item you want to address by URL should include an **`id`** field (number or string).
+
+## Publishing to npm (maintainers)
+
+1. Use an [npmjs.com](https://www.npmjs.com/) account with **2FA** enabled and permission to publish the **`@xirconsss`** scope (user or org on npm).
+2. Log in locally: `npm login` (or `npm login --auth-type=web`).
+3. Install deps and build: `npm install` (so `tsc` is available), then bump **`version`** in `package.json` when releasing.
+4. Publish: `npm publish` (`publishConfig.access` is already `public` for this scoped package).
+
+**GitHub Actions:** this repo includes a workflow that publishes on **workflow_dispatch** or when a **GitHub Release** is published. Add an **`NPM_TOKEN`** repository secret ([automation or granular token](https://docs.npmjs.com/creating-and-viewing-access-tokens) with publish rights). The workflow runs `npm ci`, `npm run build`, and `npm publish --provenance`.
 
 ## License
 
