@@ -1,7 +1,6 @@
-# Publishes via npm trusted publishing (OIDC). No NPM_TOKEN.
-# Configure once on npm: package @xirconsss/zero-mock → Settings → Trusted publishing → GitHub Actions.
-# Workflow filename here must match npm exactly: publish-npm.yml
-# See https://docs.npmjs.com/trusted-publishers
+# Publishes with a long-lived npm token from the GitHub Environment "NPM_TOKEN" (secret name: NPM_TOKEN).
+# Use a classic Automation token or a granular token with publish access + "Bypass 2FA" — avoids EOTP.
+# Optional: later you can switch to OIDC trusted publishing (see https://docs.npmjs.com/trusted-publishers).
 name: Publish to npm
 
 on:
@@ -13,13 +12,11 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # If npm Trusted Publisher specifies a GitHub Environment, this name must match exactly (secrets not required for OIDC).
     environment: NPM_TOKEN
 
     steps:
@@ -30,12 +27,16 @@ jobs:
           node-version: "22.14"
           registry-url: https://registry.npmjs.org
 
-      - name: Upgrade npm (trusted publishing needs CLI >= 11.5.1)
-        run: npm install -g npm@^11.5.1 && npm --version
-
       - run: npm ci
 
       - run: npm run build
 
-      - name: Publish to npm via OIDC
+      - name: Verify npm authentication
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
         run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
