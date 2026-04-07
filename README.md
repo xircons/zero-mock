@@ -78,12 +78,11 @@ The root must be a JSON **object**. Each property must be an **array** (your “
 3. Install deps and build: `npm install` (so `tsc` is available), then bump **`version`** in `package.json` when releasing.
 4. Publish: `npm publish` (`publishConfig.access` is already `public` for this scoped package).
 
-**GitHub Actions:** this repo includes a workflow that publishes on **workflow_dispatch** or when a **GitHub Release** is published. Add an **`NPM_TOKEN`** repository secret ([automation or granular token](https://docs.npmjs.com/creating-and-viewing-access-tokens) with publish rights). The workflow runs `npm ci`, `npm run build`, and `npm publish --provenance`.
+**GitHub Actions:** this repo includes a workflow that publishes on **workflow_dispatch** or when a **GitHub Release** is published. Add an **`NPM_TOKEN`** repository secret ([automation or granular token](https://docs.npmjs.com/creating-and-viewing-access-tokens) with publish rights). The workflow runs `npm ci`, `npm run build`, `npm whoami` (auth check), and `npm publish`.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
-
+MIT - see [LICENSE](LICENSE).
 ## Links
 
 - **Repository:** [github.com/xircons/zero-mock](https://github.com/xircons/zero-mock)
