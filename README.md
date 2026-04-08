@@ -122,18 +122,17 @@ The root must be a JSON **object**. Each property must be an **array** (your “
 
 ## Publishing to npm (maintainers)
 
+**Release flow (recommended):** bump **`version`** in `package.json` and `package-lock.json`, commit, and **push to `main`**. [`.github/workflows/publish-npm.yml`](.github/workflows/publish-npm.yml) runs automatically, builds, and runs **`npm publish`**. If that version is already on the registry, the job skips publish and succeeds with a notice (no E403). You can still trigger a run manually from the **Actions** tab (**workflow_dispatch**). Avoid **`npm publish` on your machine** for the same version CI will publish, or you will block CI with “already published”.
+
 1. Use an [npmjs.com](https://www.npmjs.com/) account with **2FA** enabled and permission to publish the **`@xirconsss`** scope (user or org on npm).
-2. Log in locally: `npm login` (or `npm login --auth-type=web`).
-3. Install deps and build: `npm install` (so `tsc` is available), then bump **`version`** in `package.json` when releasing.
-4. Publish: `npm publish` (`publishConfig.access` is already `public` for this scoped package).
+2. **GitHub:** repo → **Settings** → **Environments** → **`NPM_TOKEN`** → add secret **`NPM_TOKEN`** (see token steps below). The workflow uses that environment on each run.
+3. Bump **`version`**, push to **`main`**, wait for **Publish to npm** to finish. Check with `npm view @xirconsss/zero-mock version`.
 
-**GitHub Actions:** the workflow [`.github/workflows/publish-npm.yml`](.github/workflows/publish-npm.yml) runs on **workflow_dispatch** or when a **GitHub Release** is published. It uses the GitHub **Environment** named **`NPM_TOKEN`** with a secret also named **`NPM_TOKEN`** (repo → **Settings** → **Environments** → **NPM_TOKEN** → **Environment secrets**).
-
-**Token on npm (required):**
+**Token on npm (required for CI):**
 
 1. Create a classic **[Automation](https://docs.npmjs.com/creating-and-viewing-access-tokens#creating-classic-tokens)** token, **or** a **[granular access token](https://docs.npmjs.com/creating-and-viewing-access-tokens#creating-granular-access-tokens)** with **read and write** on **`@xirconsss/zero-mock`** (and org **`xirconsss`** if npm asks).
 2. For granular tokens: turn **Bypass two-factor authentication (2FA)** **on** so CI does not hit **`EOTP`**. Do **not** use **`NPM_OTP`** secrets (codes expire in ~30 seconds).
-3. Paste the token into the **`NPM_TOKEN`** environment secret on GitHub, then run the workflow.
+3. Paste the token into the **`NPM_TOKEN`** environment secret on GitHub.
 
 **Optional — OIDC trusted publishing:** You can later move to [npm trusted publishing](https://docs.npmjs.com/trusted-publishers) and drop the secret; if you see **`E404`** on `PUT` with OIDC, the Trusted Publisher settings on npm (repo, workflow filename, environment name) do not match this workflow—token auth avoids that until it is configured correctly.
 
