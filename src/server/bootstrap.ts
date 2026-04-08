@@ -1,8 +1,9 @@
+import type { CreateAppOptions } from "./app";
 import { createApp } from "./app";
 import { JsonStore } from "../store/jsonStore";
 
-export async function bootstrap(port: number): Promise<void> {
-  const app = createApp();
+export async function bootstrap(port: number, appOptions: CreateAppOptions): Promise<void> {
+  const app = createApp(appOptions);
 
   await new Promise<void>((resolve, reject) => {
     const server = app.listen(port, () => {

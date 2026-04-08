@@ -7,6 +7,68 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function firstQueryValue(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    return firstQueryValue(value[0]);
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "object") {
+    return undefined;
+  }
+  return String(value);
+}
+
+function parsePagination(query: Record<string, unknown>): { page: number; limit: number } | null {
+  const pageRaw = firstQueryValue(query["_page"]);
+  const limitRaw = firstQueryValue(query["_limit"]);
+  if (pageRaw === undefined || limitRaw === undefined) {
+    return null;
+  }
+  const pageTrim = pageRaw.trim();
+  const limitTrim = limitRaw.trim();
+  if (!/^\d+$/.test(pageTrim) || !/^\d+$/.test(limitTrim)) {
+    return null;
+  }
+  const page = Number.parseInt(pageTrim, 10);
+  const limit = Number.parseInt(limitTrim, 10);
+  if (page < 1 || limit < 1) {
+    return null;
+  }
+  return { page, limit };
+}
+
+function filterCollection(items: unknown[], query: Record<string, unknown>): unknown[] {
+  const filterEntries = Object.entries(query).filter(([k]) => k !== "_page" && k !== "_limit");
+  if (filterEntries.length === 0) {
+    return items;
+  }
+  return items.filter((item) => {
+    if (!isPlainObject(item)) {
+      return false;
+    }
+    const rec = item;
+    for (const [key, qVal] of filterEntries) {
+      const want = firstQueryValue(qVal);
+      if (want === undefined) {
+        continue;
+      }
+      if (!Object.prototype.hasOwnProperty.call(rec, key)) {
+        return false;
+      }
+      if (rec[key] == want) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  });
+}
+
 function isRecordWithId(item: unknown): item is Record<string, unknown> & { id: unknown } {
   if (item === null || typeof item !== "object" || Array.isArray(item)) {
     return false;
@@ -100,8 +162,16 @@ export function buildDynamicRouter(): Router {
       }),
     );
 
-    router.get(`/${resource}`, (_req: Request, res: Response) => {
-      res.json(JsonStore.getData()[resource]);
+    router.get(`/${resource}`, (req: Request, res: Response) => {
+      const collection = JsonStore.getData()[resource];
+      const query = req.query as Record<string, unknown>;
+      let rows = filterCollection(collection, query);
+      const pageInfo = parsePagination(query);
+      if (pageInfo !== null) {
+        const start = (pageInfo.page - 1) * pageInfo.limit;
+        rows = rows.slice(start, start + pageInfo.limit);
+      }
+      res.json(rows);
     });
 
     router.post(
