@@ -40,3 +40,10 @@ jobs:
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@xirconsss/zero-mock@${VERSION}" version >/dev/null 2>&1; then
+            echo "::notice::@xirconsss/zero-mock@${VERSION} is already on npm — skipping publish (avoid duplicate E403)."
+            exit 0
+          fi
+          npm publish
