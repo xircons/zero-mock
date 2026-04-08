@@ -1,0 +1,34 @@
+{
+  "todos": [
+    {
+      "title": "TEST KUB",
+      "completed": false,
+      "id": 2
+    },
+    {
+      "title": "123",
+      "completed": false,
+      "id": 3
+    },
+    {
+      "title": "HI",
+      "completed": false,
+      "id": 4
+    },
+    {
+      "title": "add",
+      "completed": false,
+      "id": 5
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "name": "tester"
+    },
+    {
+      "name": "123",
+      "id": 2
+    }
+  ]
+}

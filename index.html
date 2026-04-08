@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zero-mock Frontend Consumer Test</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b0f17;
+        --panel: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --border: #1f2937;
+        --accent: #60a5fa;
+        --danger: #f87171;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f6f7fb;
+          --panel: #ffffff;
+          --text: #111827;
+          --muted: #6b7280;
+          --border: #e5e7eb;
+          --accent: #2563eb;
+          --danger: #dc2626;
+        }
+      }
+      body {
+        margin: 0;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial,
+          "Apple Color Emoji",
+          "Segoe UI Emoji";
+        background: var(--bg);
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 860px;
+        margin: 32px auto;
+        padding: 0 16px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 6px 0;
+      }
+      .sub {
+        margin: 0 0 16px 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      input[type="text"] {
+        flex: 1 1 320px;
+        min-width: 220px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text);
+        outline: none;
+      }
+      button {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--text);
+        cursor: pointer;
+      }
+      button.primary {
+        border-color: color-mix(in srgb, var(--accent) 65%, var(--border));
+        background: color-mix(in srgb, var(--accent) 18%, transparent);
+      }
+      button.danger {
+        border-color: color-mix(in srgb, var(--danger) 65%, var(--border));
+        background: color-mix(in srgb, var(--danger) 14%, transparent);
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      .status {
+        margin-top: 12px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .sectionTitle {
+        margin: 16px 0 8px 0;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 16px 0 0 0;
+      }
+      li {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 10px;
+      }
+      .todoTitle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .pill {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .titleText {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 520px;
+      }
+      .titleText.isCompleted {
+        text-decoration: line-through;
+        opacity: 0.7;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>Frontend Consumer Test</h1>
+        <p class="sub">
+          Consumes the published <code>@xirconsss/zero-mock</code> server at
+          <code id="baseUrlLabel"></code>
+        </p>
+
+        <div class="row">
+          <input id="newTitle" type="text" placeholder="New todo title..." autocomplete="off" />
+          <button id="addBtn" class="primary">POST (Add)</button>
+          <button id="refreshBtn">Refresh</button>
+        </div>
+
+        <div id="status" class="status"></div>
+        <p class="sectionTitle">todos</p>
+        <ul id="list"></ul>
+        <p class="sectionTitle">users</p>
+        <div class="row">
+          <input id="newUserName" type="text" placeholder="New user name..." autocomplete="off" />
+          <button id="addUserBtn" class="primary">POST User</button>
+          <button id="refreshBtnUsers">Refresh</button>
+        </div>
+        <ul id="usersList"></ul>
+      </div>
+    </div>
+
+    <script>
+      const API_ORIGIN = "http://localhost:3000";
+      const TODOS_URL = `${API_ORIGIN}/todos`;
+      const USERS_URL = `${API_ORIGIN}/users`;
+
+      const els = {
+        baseUrlLabel: document.getElementById("baseUrlLabel"),
+        newTitle: document.getElementById("newTitle"),
+        addBtn: document.getElementById("addBtn"),
+        newUserName: document.getElementById("newUserName"),
+        addUserBtn: document.getElementById("addUserBtn"),
+        refreshBtn: document.getElementById("refreshBtn"),
+        refreshBtnUsers: document.getElementById("refreshBtnUsers"),
+        status: document.getElementById("status"),
+        list: document.getElementById("list"),
+        usersList: document.getElementById("usersList"),
+      };
+
+      els.baseUrlLabel.textContent = API_ORIGIN;
+
+      function setStatus(message, kind = "info") {
+        const prefix = kind === "error" ? "Error: " : "";
+        els.status.textContent = prefix + message;
+        els.status.style.color = kind === "error" ? "var(--danger)" : "var(--muted)";
+      }
+
+      function setBusy(busy) {
+        els.addBtn.disabled = busy;
+        els.addUserBtn.disabled = busy;
+        els.refreshBtn.disabled = busy;
+        els.refreshBtnUsers.disabled = busy;
+      }
+
+      async function readJsonOrThrow(res) {
+        const text = await res.text();
+        if (!text) return null;
+        try {
+          return JSON.parse(text);
+        } catch {
+          return text;
+        }
+      }
+
+      function renderTodos(todos) {
+        els.list.innerHTML = "";
+        for (const todo of todos) {
+          const li = document.createElement("li");
+
+          const left = document.createElement("div");
+          left.className = "todoTitle";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = Boolean(todo.completed);
+          checkbox.setAttribute("aria-label", `Toggle todo ${todo.id} completion`);
+          checkbox.addEventListener("change", () => {
+            void patchTodoCompleted(todo.id, checkbox.checked);
+          });
+
+          const pill = document.createElement("span");
+          pill.className = "pill";
+          pill.textContent = `id: ${todo.id}`;
+
+          const title = document.createElement("span");
+          title.className = "titleText";
+          if (todo.completed) {
+            title.classList.add("isCompleted");
+          }
+          title.textContent = todo.title;
+
+          const completed = document.createElement("span");
+          completed.className = "pill";
+          completed.textContent = todo.completed ? "completed" : "pending";
+
+          left.appendChild(checkbox);
+          left.appendChild(pill);
+          left.appendChild(title);
+          left.appendChild(completed);
+
+          const actions = document.createElement("div");
+          actions.className = "actions";
+
+          const editBtn = document.createElement("button");
+          editBtn.textContent = "Edit";
+          editBtn.addEventListener("click", () => {
+            const updatedTitle = prompt("Edit title:", String(todo.title ?? ""));
+            if (updatedTitle === null) {
+              return;
+            }
+            const trimmed = updatedTitle.trim();
+            if (!trimmed) {
+              setStatus("Title cannot be empty.", "error");
+              return;
+            }
+            void putTodo(todo.id, trimmed, Boolean(todo.completed));
+          });
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "danger";
+          delBtn.textContent = "DELETE";
+          delBtn.addEventListener("click", async () => {
+            await deleteTodo(todo.id);
+          });
+
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+
+          li.appendChild(left);
+          li.appendChild(actions);
+          els.list.appendChild(li);
+        }
+      }
+
+      function renderUsers(users) {
+        els.usersList.innerHTML = "";
+        for (const user of users) {
+          const li = document.createElement("li");
+          const left = document.createElement("div");
+          left.className = "todoTitle";
+
+          const pill = document.createElement("span");
+          pill.className = "pill";
+          pill.textContent = `id: ${user.id}`;
+
+          const name = document.createElement("span");
+          name.className = "titleText";
+          name.textContent = user.name ?? JSON.stringify(user);
+
+          left.appendChild(pill);
+          left.appendChild(name);
+          const actions = document.createElement("div");
+          actions.className = "actions";
+
+          const editBtn = document.createElement("button");
+          editBtn.textContent = "Edit";
+          editBtn.addEventListener("click", () => {
+            const updatedName = prompt("Edit name:", String(user.name ?? ""));
+            if (updatedName === null) {
+              return;
+            }
+            const trimmed = updatedName.trim();
+            if (!trimmed) {
+              setStatus("Name cannot be empty.", "error");
+              return;
+            }
+            void putUser(user.id, trimmed);
+          });
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "danger";
+          delBtn.textContent = "DELETE";
+          delBtn.addEventListener("click", async () => {
+            await deleteUser(user.id);
+          });
+
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+          li.appendChild(left);
+          li.appendChild(actions);
+          els.usersList.appendChild(li);
+        }
+      }
+
+      async function loadAllData() {
+        setBusy(true);
+        setStatus("Loading todos and users…");
+        try {
+          const [todosRes, usersRes] = await Promise.all([
+            fetch(TODOS_URL, { method: "GET" }),
+            fetch(USERS_URL, { method: "GET" }),
+          ]);
+
+          const [todosBody, usersBody] = await Promise.all([
+            readJsonOrThrow(todosRes),
+            readJsonOrThrow(usersRes),
+          ]);
+
+          if (!todosRes.ok) {
+            throw new Error(
+              `todos: ${typeof todosBody === "string" ? todosBody : JSON.stringify(todosBody)}`,
+            );
+          }
+          if (!usersRes.ok) {
+            throw new Error(
+              `users: ${typeof usersBody === "string" ? usersBody : JSON.stringify(usersBody)}`,
+            );
+          }
+
+          const todos = Array.isArray(todosBody) ? todosBody : [];
+          const users = Array.isArray(usersBody) ? usersBody : [];
+          renderTodos(todos);
+          renderUsers(users);
+          setStatus(`Loaded ${todos.length} todos and ${users.length} users.`);
+        } catch (err) {
+          setStatus(`Could not reach ${API_ORIGIN}. Is the mock server running on port 3000? (${err})`, "error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function addTodo(title) {
+        setBusy(true);
+        setStatus("Posting new todo…");
+        try {
+          const res = await fetch(TODOS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, completed: false }),
+          });
+          const body = await readJsonOrThrow(res);
+          if (!res.ok) {
+            throw new Error(typeof body === "string" ? body : JSON.stringify(body));
+          }
+          els.newTitle.value = "";
+          await loadAllData();
+        } catch (err) {
+          setStatus(`POST failed: ${err}`, "error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function deleteTodo(id) {
+        setBusy(true);
+        setStatus(`Deleting todo ${id}…`);
+        try {
+          const res = await fetch(`${TODOS_URL}/${encodeURIComponent(id)}`, { method: "DELETE" });
+          if (!res.ok) {
+            const body = await readJsonOrThrow(res);
+            throw new Error(typeof body === "string" ? body : JSON.stringify(body));
+          }
+          await loadAllData();
+        } catch (err) {
+          setStatus(`DELETE failed: ${err}`, "error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function patchTodoCompleted(id, isChecked) {
+        setBusy(true);
+        setStatus(`Patching todo ${id}...`);
+        try {
+          const res = await fetch(`${TODOS_URL}/${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ completed: isChecked }),
+          });
+          const body = await readJsonOrThrow(res);
+          if (!res.ok) {
+            throw new Error(typeof body === "string" ? body : JSON.stringify(body));
+          }
+          await loadAllData();
+        } catch (err) {
+          setStatus(`PATCH failed: ${err}`, "error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function putTodo(id, title, completed) {
+        setBusy(true);
+        setStatus(`Replacing todo ${id}...`);
+        try {
+          const res = await fetch(`${TODOS_URL}/${encodeURIComponent(id)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, completed }),
+          });
+          const body = await readJsonOrThrow(res);
+          if (!res.ok) {
+            throw new Error(typeof body === "string" ? body : JSON.stringify(body));
+          }
+          await loadAllData();
+        } catch (err) {
+          setStatus(`PUT failed: ${err}`, "error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function addUser(name) {
+        setBusy(true);
+        setStatus("Posting new user…");
+        try {
+          const res = await fetch(USERS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+          });
+          const body = await readJsonOrThrow(res);
+          if (!res.ok) {
+            throw new Error(typeof body === "string" ? body : JSON.stringify(body));
+          }
+          els.newUserName.value = "";
+          await loadAllData();
+        } catch (err) {
+          setStatus(`POST user failed: ${err}`, "error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function deleteUser(id) {
+        setBusy(true);
+        setStatus(`Deleting user ${id}…`);
+        try {
+          const res = await fetch(`${USERS_URL}/${encodeURIComponent(id)}`, { method: "DELETE" });
+          if (!res.ok) {
+            const body = await readJsonOrThrow(res);
+            throw new Error(typeof body === "string" ? body : JSON.stringify(body));
+          }
+          await loadAllData();
+        } catch (err) {
+          setStatus(`DELETE user failed: ${err}`, "error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function putUser(id, name) {
+        setBusy(true);
+        setStatus(`Replacing user ${id}...`);
+        try {
+          const res = await fetch(`${USERS_URL}/${encodeURIComponent(id)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+          });
+          const body = await readJsonOrThrow(res);
+          if (!res.ok) {
+            throw new Error(typeof body === "string" ? body : JSON.stringify(body));
+          }
+          await loadAllData();
+        } catch (err) {
+          setStatus(`PUT user failed: ${err}`, "error");
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      els.refreshBtn.addEventListener("click", () => void loadAllData());
+      els.refreshBtnUsers.addEventListener("click", () => void loadAllData());
+      els.addBtn.addEventListener("click", () => {
+        const title = els.newTitle.value.trim();
+        if (!title) {
+          setStatus("Please enter a title first.", "error");
+          return;
+        }
+        void addTodo(title);
+      });
+      els.addUserBtn.addEventListener("click", () => {
+        const name = els.newUserName.value.trim();
+        if (!name) {
+          setStatus("Please enter a user name first.", "error");
+          return;
+        }
+        void addUser(name);
+      });
+      els.newTitle.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          els.addBtn.click();
+        }
+      });
+      els.newUserName.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          els.addUserBtn.click();
+        }
+      });
+
+      void loadAllData();
+    </script>
+  </body>
+</html>
