@@ -10,8 +10,6 @@
 
 ![Terminal demo](docs/demo.gif)
 
-Regenerate from a `.cast` with [agg](https://github.com/asciinema/agg): `agg recording.cast docs/demo.gif`. To drop trailing frames (e.g. `^C` / `exit`), keep an early range with [gifsicle](https://www.lcdf.org/gifsicle/): `gifsicle docs/demo.gif '#0-10' -o docs/demo.gif` (adjust the end frame as needed).
-
 ## Installation
 
 ### Global
