@@ -122,11 +122,11 @@ The root must be a JSON **object**. Each property must be an **array** (your “
 
 ## Publishing to npm (maintainers)
 
-**Release flow (recommended):** bump **`version`** in `package.json` and `package-lock.json`, commit, and **push to `main`**. [`.github/workflows/publish-npm.yml`](.github/workflows/publish-npm.yml) runs automatically, builds, and runs **`npm publish`**. If that version is already on the registry, the job skips publish and succeeds with a notice (no E403). You can still trigger a run manually from the **Actions** tab (**workflow_dispatch**). Avoid **`npm publish` on your machine** for the same version CI will publish, or you will block CI with “already published”.
+**Release flow (recommended):** Automated via `semantic-release`. Commits following the conventional commit format (e.g., `feat:`, `fix:`) pushed to `main` will automatically trigger a version bump, changelog generation, and NPM publish via the [`.github/workflows/publish-npm.yml`](.github/workflows/publish-npm.yml) workflow. Avoid running `npm publish` on your machine.
 
 1. Use an [npmjs.com](https://www.npmjs.com/) account with **2FA** enabled and permission to publish the **`@xirconsss`** scope (user or org on npm).
 2. **GitHub:** repo → **Settings** → **Environments** → **`NPM_TOKEN`** → add secret **`NPM_TOKEN`** (see token steps below). The workflow uses that environment on each run.
-3. Bump **`version`**, push to **`main`**, wait for **Publish to npm** to finish. Check with `npm view @xirconsss/zero-mock version`.
+3. Push conventional commits to **`main`**, wait for **Publish to npm** to finish. Check with `npm view @xirconsss/zero-mock version`.
 
 **Token on npm (required for CI):**
 
