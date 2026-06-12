@@ -1,6 +1,6 @@
 import { randomBytes } from "crypto";
 import { dirname, join } from "path";
-import { readFile, rename, unlink, writeFile } from "fs/promises";
+import { access, readFile, rename, unlink, writeFile } from "fs/promises";
 import type { JsonData } from "../types";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -37,10 +37,25 @@ function parseJsonStorePayload(raw: string, filePath: string): JsonData {
 class JsonStoreImpl {
   private data: JsonData = {};
   private backingPath: string | null = null;
+  private lockPath: string | null = null;
   /** Serializes concurrent save() calls so writes are not interleaved. */
   private saveChain: Promise<void> = Promise.resolve();
 
   async load(filePath: string): Promise<void> {
+    const lockPath = filePath + ".zero-mock.lock";
+    try {
+      await access(lockPath);
+      console.warn(
+        `[warn] Lock file found: "${lockPath}". ` +
+        `Another zero-mock process may be running on this file. ` +
+        `If not, delete the lock file and retry.`,
+      );
+    } catch {
+      await writeFile(lockPath, String(process.pid), "utf8");
+      this.lockPath = lockPath;
+      this._registerLockCleanup();
+    }
+
     let raw: string;
     try {
       raw = await readFile(filePath, "utf8");
@@ -56,6 +71,19 @@ class JsonStoreImpl {
 
     this.data = parseJsonStorePayload(raw, filePath);
     this.backingPath = filePath;
+  }
+
+  private _registerLockCleanup(): void {
+    const cleanup = (): void => {
+      if (this.lockPath) {
+        try {
+          require("fs").unlinkSync(this.lockPath);
+        } catch (_) {}
+      }
+    };
+    process.once("exit", cleanup);
+    process.once("SIGINT", () => { cleanup(); process.exit(130); });
+    process.once("SIGTERM", () => { cleanup(); process.exit(143); });
   }
 
   getData(): JsonData {

@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import type { NextFunction, Request, RequestHandler, Response, Router } from "express";
 import express from "express";
+import { z } from "zod";
 import { JsonStore } from "../../store/jsonStore";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -103,6 +104,38 @@ function badBody(res: Response): void {
   res.status(400).json({ error: "Request body must be a JSON object." });
 }
 
+/**
+ * Infer a zod schema from the first item in a collection.
+ * Returns null if the collection is empty (skip validation).
+ * The schema is "partial" so that POST/PATCH with missing optional fields still pass —
+ * only fields that ARE present are type-checked.
+ */
+function inferSchema(collection: unknown[]): z.ZodTypeAny | null {
+  const first = collection.find(isPlainObject);
+  if (!first) return null;
+  const shape: Record<string, z.ZodTypeAny> = {};
+  for (const [key, value] of Object.entries(first)) {
+    if (key === "id") continue;
+    if (typeof value === "string")       shape[key] = z.string();
+    else if (typeof value === "number")  shape[key] = z.number();
+    else if (typeof value === "boolean") shape[key] = z.boolean();
+    else                                 shape[key] = z.unknown();
+  }
+  return z.object(shape).partial();
+}
+
+function validateBody(res: Response, collection: unknown[], body: unknown): boolean {
+  const schema = inferSchema(collection);
+  if (!schema) return true; // empty collection → skip
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    const messages = result.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`);
+    res.status(400).json({ error: "Validation failed.", details: messages });
+    return false;
+  }
+  return true;
+}
+
 function numericIdValue(id: unknown): number | null {
   if (typeof id === "number" && Number.isFinite(id) && Number.isInteger(id)) {
     return id;
@@ -182,6 +215,7 @@ export function buildDynamicRouter(): Router {
           return;
         }
         const collection = JsonStore.getData()[resource];
+        if (!validateBody(res, collection, req.body)) return;
         const newId = nextIdForCollection(collection);
         const rawBody = req.body as Record<string, unknown>;
         const rest: Record<string, unknown> = { ...rawBody };
@@ -202,6 +236,7 @@ export function buildDynamicRouter(): Router {
         }
         const { id: idParam } = req.params;
         const collection = JsonStore.getData()[resource];
+        if (!validateBody(res, collection, req.body)) return;
         const index = findIndexById(collection, idParam);
         if (index === -1) {
           itemNotFound(res, resource, idParam);
@@ -228,6 +263,7 @@ export function buildDynamicRouter(): Router {
         }
         const { id: idParam } = req.params;
         const collection = JsonStore.getData()[resource];
+        if (!validateBody(res, collection, req.body)) return;
         const index = findIndexById(collection, idParam);
         if (index === -1) {
           itemNotFound(res, resource, idParam);
