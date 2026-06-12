@@ -8,7 +8,7 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
   const message = err instanceof Error ? err.message : String(err);
-  res.status(500).json({ error: message });
+  res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message, statusCode: 500 });
 };
 
 export type CreateAppOptions = {

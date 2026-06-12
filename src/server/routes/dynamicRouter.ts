@@ -44,27 +44,58 @@ function parsePagination(query: Record<string, unknown>): { page: number; limit:
 }
 
 function filterCollection(items: unknown[], query: Record<string, unknown>): unknown[] {
-  const filterEntries = Object.entries(query).filter(([k]) => k !== "_page" && k !== "_limit");
-  if (filterEntries.length === 0) {
-    return items;
+  let result = items;
+
+  // Sorting
+  const sort = firstQueryValue(query["_sort"]);
+  const order = firstQueryValue(query["_order"])?.toLowerCase() === "desc" ? -1 : 1;
+
+  if (sort) {
+    result = [...result].sort((a, b) => {
+      if (!isPlainObject(a) || !isPlainObject(b)) return 0;
+      const valA = a[sort];
+      const valB = b[sort];
+      if (valA === valB) return 0;
+      if (valA === undefined) return order;
+      if (valB === undefined) return -order;
+      if (typeof valA === "number" && typeof valB === "number") return (valA - valB) * order;
+      return String(valA).localeCompare(String(valB)) * order;
+    });
   }
-  return items.filter((item) => {
+
+  const filterEntries = Object.entries(query).filter(([k]) => !["_page", "_limit", "_sort", "_order"].includes(k));
+  if (filterEntries.length === 0) {
+    return result;
+  }
+  
+  return result.filter((item) => {
     if (!isPlainObject(item)) {
       return false;
     }
     const rec = item;
     for (const [key, qVal] of filterEntries) {
       const want = firstQueryValue(qVal);
-      if (want === undefined) {
-        continue;
+      if (want === undefined) continue;
+
+      let field = key;
+      let op = "eq";
+
+      if (key.endsWith("_gte")) { field = key.slice(0, -4); op = "gte"; }
+      else if (key.endsWith("_lte")) { field = key.slice(0, -4); op = "lte"; }
+      else if (key.endsWith("_like")) { field = key.slice(0, -5); op = "like"; }
+
+      const actual = rec[field];
+      
+      if (op === "eq") {
+        if (actual != want) return false;
+      } else if (op === "gte") {
+        if (Number(actual) < Number(want)) return false;
+      } else if (op === "lte") {
+        if (Number(actual) > Number(want)) return false;
+      } else if (op === "like") {
+        if (actual === undefined || actual === null) return false;
+        if (!String(actual).toLowerCase().includes(String(want).toLowerCase())) return false;
       }
-      if (!Object.prototype.hasOwnProperty.call(rec, key)) {
-        return false;
-      }
-      if (rec[key] == want) {
-        continue;
-      }
-      return false;
     }
     return true;
   });
