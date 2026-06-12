@@ -1,6 +1,3 @@
-# Publishes with a long-lived npm token from the GitHub Environment "NPM_TOKEN" (secret name: NPM_TOKEN).
-# Use a classic Automation token or a granular token with publish access + "Bypass 2FA" — avoids EOTP.
-# Optional: later you can switch to OIDC trusted publishing (see https://docs.npmjs.com/trusted-publishers).
 name: Publish to npm
 
 on:
@@ -13,41 +10,38 @@ concurrency:
   group: npm-publish-${{ github.workflow }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-permissions:
-  contents: read
-
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     environment: NPM_TOKEN
-
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/setup-node@v5
         with:
           node-version: "22.14"
           registry-url: https://registry.npmjs.org
+          cache: 'npm'
 
       - run: npm ci
-
       - run: npm run build
+      - run: npm test
 
-      - name: Verify npm authentication
-        run: npm whoami
+      - name: Release
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          if npm view "@xirconsss/zero-mock@${VERSION}" version >/dev/null 2>&1; then
-            echo "::notice::@xirconsss/zero-mock@${VERSION} is already on npm — skipping publish (avoid duplicate E403)."
-            exit 0
-          fi
-          npm publish
+        run: npx semantic-release
