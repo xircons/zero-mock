@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { watch } from "fs";
+import chokidar from "chokidar";
 import { Command } from "commander";
 import { JsonStore } from "./store/jsonStore";
 import { bootstrap } from "./server/bootstrap";
@@ -9,6 +9,9 @@ type CliOpts = {
   port: string;
   delay: string;
   watch: boolean;
+  corsOrigin?: string;
+  corsMethods?: string;
+  corsCredentials?: boolean;
 };
 
 function parseDelayMs(raw: string): number | null {
@@ -20,31 +23,30 @@ function parseDelayMs(raw: string): number | null {
 }
 
 function startFileWatcher(filePath: string): void {
-  let reloadInFlight = false;
+  let reloadTimeout: ReturnType<typeof setTimeout> | null = null;
+
   const reload = async (): Promise<void> => {
-    if (reloadInFlight) {
-      return;
-    }
-    reloadInFlight = true;
     try {
       await JsonStore.load(filePath);
+      console.log(`[watch] Reloaded "${filePath}".`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[watch] Could not reload "${filePath}": ${message}`);
-    } finally {
-      reloadInFlight = false;
     }
   };
 
-  try {
-    watch(filePath, { persistent: true }, () => {
-      void reload();
+  chokidar
+    .watch(filePath, { persistent: true, ignoreInitial: true })
+    .on("change", () => {
+      if (reloadTimeout) clearTimeout(reloadTimeout);
+      reloadTimeout = setTimeout(() => void reload(), 100);
+    })
+    .on("error", (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[watch] Watcher error: ${msg}`);
     });
-    console.log(`[watch] Watching "${filePath}" for changes.`);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`[watch] Failed to watch "${filePath}": ${message}`);
-  }
+
+  console.log(`[watch] Watching "${filePath}" for changes.`);
 }
 
 const program = new Command();
@@ -56,6 +58,9 @@ program
   .option("-p, --port <number>", "HTTP port", "3000")
   .option("-d, --delay <ms>", "delay each request by this many ms (0 = off)", "0")
   .option("-w, --watch", "reload JSON from disk when the file changes", false)
+  .option("--cors-origin <origins>", "comma-separated list of allowed origins (e.g., http://localhost:3000)", "*")
+  .option("--cors-methods <methods>", "comma-separated list of allowed HTTP methods", "GET,HEAD,PUT,PATCH,POST,DELETE")
+  .option("--cors-credentials", "enable CORS credentials (cookies, authorization headers)", false)
   .action(async (opts: CliOpts) => {
     const port = Number.parseInt(opts.port, 10);
     if (Number.isNaN(port) || port < 1 || port > 65535) {
@@ -83,7 +88,12 @@ program
     }
 
     try {
-      await bootstrap(port, { delayMs });
+      await bootstrap(port, { 
+        delayMs,
+        corsOrigin: opts.corsOrigin,
+        corsMethods: opts.corsMethods,
+        corsCredentials: opts.corsCredentials,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`Failed to start server: ${message}`);

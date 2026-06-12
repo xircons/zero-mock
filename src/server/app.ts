@@ -8,11 +8,14 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
   const message = err instanceof Error ? err.message : String(err);
-  res.status(500).json({ error: message });
+  res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message, statusCode: 500 });
 };
 
 export type CreateAppOptions = {
   delayMs: number;
+  corsOrigin?: string;
+  corsMethods?: string;
+  corsCredentials?: boolean;
 };
 
 function requestLoggingMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -34,7 +37,13 @@ function delayMiddleware(delayMs: number) {
 
 export function createApp(options: CreateAppOptions): Application {
   const app = express();
-  app.use(cors());
+  
+  app.use(cors({
+    origin: options.corsOrigin && options.corsOrigin !== "*" ? options.corsOrigin.split(",") : "*",
+    methods: options.corsMethods || "GET,HEAD,PUT,PATCH,POST,DELETE",
+    credentials: options.corsCredentials || false,
+  }));
+  
   app.use(express.json());
   app.use(requestLoggingMiddleware);
   app.use(delayMiddleware(options.delayMs));

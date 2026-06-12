@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import type { NextFunction, Request, RequestHandler, Response, Router } from "express";
 import express from "express";
+import { z } from "zod";
 import { JsonStore } from "../../store/jsonStore";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -43,27 +44,58 @@ function parsePagination(query: Record<string, unknown>): { page: number; limit:
 }
 
 function filterCollection(items: unknown[], query: Record<string, unknown>): unknown[] {
-  const filterEntries = Object.entries(query).filter(([k]) => k !== "_page" && k !== "_limit");
-  if (filterEntries.length === 0) {
-    return items;
+  let result = items;
+
+  // Sorting
+  const sort = firstQueryValue(query["_sort"]);
+  const order = firstQueryValue(query["_order"])?.toLowerCase() === "desc" ? -1 : 1;
+
+  if (sort) {
+    result = [...result].sort((a, b) => {
+      if (!isPlainObject(a) || !isPlainObject(b)) return 0;
+      const valA = a[sort];
+      const valB = b[sort];
+      if (valA === valB) return 0;
+      if (valA === undefined) return order;
+      if (valB === undefined) return -order;
+      if (typeof valA === "number" && typeof valB === "number") return (valA - valB) * order;
+      return String(valA).localeCompare(String(valB)) * order;
+    });
   }
-  return items.filter((item) => {
+
+  const filterEntries = Object.entries(query).filter(([k]) => !["_page", "_limit", "_sort", "_order"].includes(k));
+  if (filterEntries.length === 0) {
+    return result;
+  }
+  
+  return result.filter((item) => {
     if (!isPlainObject(item)) {
       return false;
     }
     const rec = item;
     for (const [key, qVal] of filterEntries) {
       const want = firstQueryValue(qVal);
-      if (want === undefined) {
-        continue;
+      if (want === undefined) continue;
+
+      let field = key;
+      let op = "eq";
+
+      if (key.endsWith("_gte")) { field = key.slice(0, -4); op = "gte"; }
+      else if (key.endsWith("_lte")) { field = key.slice(0, -4); op = "lte"; }
+      else if (key.endsWith("_like")) { field = key.slice(0, -5); op = "like"; }
+
+      const actual = rec[field];
+      
+      if (op === "eq") {
+        if (actual != want) return false;
+      } else if (op === "gte") {
+        if (Number(actual) < Number(want)) return false;
+      } else if (op === "lte") {
+        if (Number(actual) > Number(want)) return false;
+      } else if (op === "like") {
+        if (actual === undefined || actual === null) return false;
+        if (!String(actual).toLowerCase().includes(String(want).toLowerCase())) return false;
       }
-      if (!Object.prototype.hasOwnProperty.call(rec, key)) {
-        return false;
-      }
-      if (rec[key] == want) {
-        continue;
-      }
-      return false;
     }
     return true;
   });
@@ -101,6 +133,38 @@ function itemNotFound(res: Response, resource: string, id: string): void {
 
 function badBody(res: Response): void {
   res.status(400).json({ error: "Request body must be a JSON object." });
+}
+
+/**
+ * Infer a zod schema from the first item in a collection.
+ * Returns null if the collection is empty (skip validation).
+ * The schema is "partial" so that POST/PATCH with missing optional fields still pass —
+ * only fields that ARE present are type-checked.
+ */
+function inferSchema(collection: unknown[]): z.ZodTypeAny | null {
+  const first = collection.find(isPlainObject);
+  if (!first) return null;
+  const shape: Record<string, z.ZodTypeAny> = {};
+  for (const [key, value] of Object.entries(first)) {
+    if (key === "id") continue;
+    if (typeof value === "string")       shape[key] = z.string();
+    else if (typeof value === "number")  shape[key] = z.number();
+    else if (typeof value === "boolean") shape[key] = z.boolean();
+    else                                 shape[key] = z.unknown();
+  }
+  return z.object(shape).partial();
+}
+
+function validateBody(res: Response, collection: unknown[], body: unknown): boolean {
+  const schema = inferSchema(collection);
+  if (!schema) return true; // empty collection → skip
+  const result = schema.safeParse(body);
+  if (!result.success) {
+    const messages = result.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`);
+    res.status(400).json({ error: "Validation failed.", details: messages });
+    return false;
+  }
+  return true;
 }
 
 function numericIdValue(id: unknown): number | null {
@@ -182,6 +246,7 @@ export function buildDynamicRouter(): Router {
           return;
         }
         const collection = JsonStore.getData()[resource];
+        if (!validateBody(res, collection, req.body)) return;
         const newId = nextIdForCollection(collection);
         const rawBody = req.body as Record<string, unknown>;
         const rest: Record<string, unknown> = { ...rawBody };
@@ -202,6 +267,7 @@ export function buildDynamicRouter(): Router {
         }
         const { id: idParam } = req.params;
         const collection = JsonStore.getData()[resource];
+        if (!validateBody(res, collection, req.body)) return;
         const index = findIndexById(collection, idParam);
         if (index === -1) {
           itemNotFound(res, resource, idParam);
@@ -228,6 +294,7 @@ export function buildDynamicRouter(): Router {
         }
         const { id: idParam } = req.params;
         const collection = JsonStore.getData()[resource];
+        if (!validateBody(res, collection, req.body)) return;
         const index = findIndexById(collection, idParam);
         if (index === -1) {
           itemNotFound(res, resource, idParam);
