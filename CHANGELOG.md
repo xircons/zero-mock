@@ -1,3 +1,17 @@
+# [1.1.0](https://github.com/xircons/zero-mock/compare/v1.0.0...v1.1.0) (2026-06-12)
+
+
+### Bug Fixes
+
+* force publish to npm after 2fa issue ([5ab4993](https://github.com/xircons/zero-mock/commit/5ab49932fb7adc39a47e51259209675a7aef4776))
+
+
+### Features
+
+* add advanced CORS configuration options ([df1d9d2](https://github.com/xircons/zero-mock/commit/df1d9d23f401cd289169a2ed1b4ad6cccea12d3c))
+* add advanced filtering, pagination metadata, and standardized error responses ([32b0b3d](https://github.com/xircons/zero-mock/commit/32b0b3da09f15899e4b6dce260ac90411d0399df))
+* implement chokidar watcher, file locking, and zod validation ([b18edfc](https://github.com/xircons/zero-mock/commit/b18edfcaa3f031a3cd5ea0cd25458ac3d4d15886))
+
 # 1.0.0 (2026-06-12)
 
 
