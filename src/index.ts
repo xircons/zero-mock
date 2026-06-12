@@ -9,6 +9,9 @@ type CliOpts = {
   port: string;
   delay: string;
   watch: boolean;
+  corsOrigin?: string;
+  corsMethods?: string;
+  corsCredentials?: boolean;
 };
 
 function parseDelayMs(raw: string): number | null {
@@ -55,6 +58,9 @@ program
   .option("-p, --port <number>", "HTTP port", "3000")
   .option("-d, --delay <ms>", "delay each request by this many ms (0 = off)", "0")
   .option("-w, --watch", "reload JSON from disk when the file changes", false)
+  .option("--cors-origin <origins>", "comma-separated list of allowed origins (e.g., http://localhost:3000)", "*")
+  .option("--cors-methods <methods>", "comma-separated list of allowed HTTP methods", "GET,HEAD,PUT,PATCH,POST,DELETE")
+  .option("--cors-credentials", "enable CORS credentials (cookies, authorization headers)", false)
   .action(async (opts: CliOpts) => {
     const port = Number.parseInt(opts.port, 10);
     if (Number.isNaN(port) || port < 1 || port > 65535) {
@@ -82,7 +88,12 @@ program
     }
 
     try {
-      await bootstrap(port, { delayMs });
+      await bootstrap(port, { 
+        delayMs,
+        corsOrigin: opts.corsOrigin,
+        corsMethods: opts.corsMethods,
+        corsCredentials: opts.corsCredentials,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`Failed to start server: ${message}`);
