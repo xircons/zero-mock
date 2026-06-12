@@ -1,7 +1,7 @@
 # Dependencies
 node_modules/
 
-# Build
+# Build output
 dist/
 
 # Logs
@@ -14,19 +14,22 @@ pnpm-debug.log*
 # Environment
 .env
 .env.*
+.env.local
 
 # OS
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE / Editor
 .idea/
 .vscode/
-
-# Local test / scratch data
-test-db.json
-*.local.json
+*.swp
+*.swo
 
 # Cursor / Claude (local-only)
 .cursorrules
 .claude/
+
+# Temp files
+*.tmp
+.zero-mock-*.tmp
