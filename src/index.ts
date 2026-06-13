@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import chokidar from "chokidar";
+import * as chokidar from "chokidar";
 import pc from "picocolors";
 import { Command } from "commander";
 import { JsonStore } from "./store/jsonStore";
@@ -27,32 +27,42 @@ function parseDelayMs(raw: string): number | null {
   return Number.parseInt(trimmed, 10);
 }
 
+const program = new Command();
+
+let watcher: chokidar.FSWatcher | null = null;
+
 function startFileWatcher(filePath: string): void {
   let reloadTimeout: ReturnType<typeof setTimeout> | null = null;
 
+  if (watcher) {
+    watcher.close().catch(() => {});
+    watcher = null;
+  }
+
   const reload = async (): Promise<void> => {
     try {
-      await JsonStore.load(filePath);
-      console.log(`[watch] Reloaded "${filePath}".`);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`[watch] Could not reload "${filePath}": ${message}`);
+      await JsonStore.load(filePath, true);
+      console.log(`\n  ${pc.dim('│')}  ${pc.green('✓')} ${pc.dim('Hot reloaded data from')} ${pc.white(filePath)}`);
+    } catch (err: any) {
+      printError('WATCH_RELOAD_FAILED', err.message);
     }
   };
 
-  chokidar
-    .watch(filePath, { persistent: true, ignoreInitial: true })
-    .on("change", () => {
-      if (reloadTimeout) clearTimeout(reloadTimeout);
-      reloadTimeout = setTimeout(() => void reload(), 100);
-    })
-    .on("error", (err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[watch] Watcher error: ${msg}`);
-    });
+  try {
+    watcher = chokidar.watch(filePath, { persistent: true, ignoreInitial: true });
+    watcher
+      .on("change", () => {
+        if (reloadTimeout) clearTimeout(reloadTimeout);
+        reloadTimeout = setTimeout(() => void reload(), 100);
+      })
+      .on("error", (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        printError('WATCH_FAILED', msg);
+      });
+  } catch (err: any) {
+    printError('WATCH_FAILED', err.message);
+  }
 }
-
-const program = new Command();
 
 program
   .name("zero-mock")
@@ -66,8 +76,9 @@ program
   .option("--cors-credentials", "enable CORS credentials (cookies, authorization headers)", false)
   .option("--reset", "clear saved wizard configuration")
   .action(async (opts: CliOpts) => {
-    if (opts.reset) {
+    if (process.argv.includes('--reset')) {
       clearSavedConfig();
+      process.exit(0);
     }
     
     let { file, port: portRaw, delay: delayRaw, watch } = opts;
@@ -126,6 +137,14 @@ program
     if (watch) {
       startFileWatcher(filePath);
     }
+
+    const cleanup = () => {
+      if (watcher) {
+        watcher.close().catch(() => {});
+      }
+    };
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
   });
 
 program.parse(process.argv);

@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { dirname, join } from "path";
-import { readFile, rename, unlink, writeFile } from "fs/promises";
+import fs from "fs";
+import { readFile, writeFile } from "fs/promises";
 import type { JsonData } from "../types";
 import { printError, printFatal } from "../errors";
 
@@ -76,9 +77,18 @@ class JsonStoreImpl {
       const payload = `${JSON.stringify(this.data, null, 2)}\n`;
       try {
         await writeFile(tmp, payload, "utf8");
-        await rename(tmp, target);
+        try {
+          fs.renameSync(tmp, target);
+        } catch (e: any) {
+          if (e.code === 'EXDEV') {
+            fs.copyFileSync(tmp, target);
+            fs.unlinkSync(tmp);
+          } else {
+            throw e;
+          }
+        }
       } catch (err) {
-        await unlink(tmp).catch(() => {});
+        if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
         const message = err instanceof Error ? err.message : String(err);
         throw new Error(`Could not write JSON file "${target}": ${message}`);
       }

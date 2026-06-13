@@ -94,7 +94,8 @@ function filterCollection(items: unknown[], query: Record<string, unknown>): unk
         if (Number(actual) > Number(want)) return false;
       } else if (op === "like") {
         if (actual === undefined || actual === null) return false;
-        if (!String(actual).toLowerCase().includes(String(want).toLowerCase())) return false;
+        const escaped = want.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (!new RegExp(escaped, 'i').test(String(actual))) return false;
       }
     }
     return true;
@@ -230,10 +231,25 @@ export function buildDynamicRouter(): Router {
       const collection = JsonStore.getData()[resource];
       const query = req.query as Record<string, unknown>;
       let rows = filterCollection(collection, query);
+      const total = rows.length;
+      res.setHeader("X-Total-Count", total);
+
       const pageInfo = parsePagination(query);
       if (pageInfo !== null) {
         const start = (pageInfo.page - 1) * pageInfo.limit;
         rows = rows.slice(start, start + pageInfo.limit);
+        
+        const totalPages = Math.ceil(total / pageInfo.limit);
+        res.json({
+          data: rows,
+          pagination: {
+            total,
+            page: pageInfo.page,
+            limit: pageInfo.limit,
+            totalPages
+          }
+        });
+        return;
       }
       res.json(rows);
     });
