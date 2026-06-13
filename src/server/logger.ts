@@ -1,17 +1,23 @@
 import type { Request, Response, NextFunction } from 'express';
 import pc from 'picocolors';
 
+const formatMethod = (method: string) => {
+  // Truncate or pad to exactly 5 characters
+  const padded = method.substring(0, 5).padEnd(5, ' ');
+  return pc.inverse(` ${padded} `); // 7 chars visually with spaces
+};
+
 export function requestLoggingMiddleware(req: Request, res: Response, next: NextFunction): void {
   const start = new Date();
   
   res.on("finish", () => {
     const timeStr = start.toLocaleTimeString('en-US', { hour12: true });
     
-    const methodStr = pc.inverse(req.method.padEnd(6, ' '));
+    const methodStr = formatMethod(req.method);
     
     let statusStr = String(res.statusCode);
     if (res.statusCode >= 400) {
-      statusStr = pc.inverse(statusStr);
+      statusStr = pc.inverse(` ${statusStr} `);
     } else {
       statusStr = pc.bold(pc.white(statusStr));
     }
@@ -33,16 +39,16 @@ export function printStartupBanner(file: string, port: number, isWatch: boolean,
   
   const base = `http://localhost:${port}`;
   
-  const get = pc.bgWhite(pc.black(' GET '));
-  const post = pc.bgWhite(pc.black(' POST '));
-  const put = pc.bgWhite(pc.black(' PUT '));
-  const patch = pc.bgWhite(pc.black(' PATCH '));
-  const del = pc.bgWhite(pc.black(' DEL '));
+  const get = formatMethod("GET");
+  const post = formatMethod("POST");
+  const put = formatMethod("PUT");
+  const patch = formatMethod("PATCH");
+  const del = formatMethod("DEL");
 
   for (const resource of resources) {
     console.log(`${pc.bold(pc.white(`■ /${resource}`))}`);
-    console.log(`  ${get}   ${post}                 ${base}/${resource}`);
-    console.log(`  ${get}   ${put}   ${patch} ${del}  ${base}/${resource}/:id\n`);
+    console.log(`  ${get}  ${post}                 ${base}/${resource}`);
+    console.log(`  ${get}  ${put}  ${patch}  ${del}  ${base}/${resource}/:id\n`);
   }
   
   console.log(pc.bold(pc.white("REQUEST LOGS")));

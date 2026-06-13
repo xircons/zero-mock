@@ -1,4 +1,5 @@
 import { select, input, confirm } from '@inquirer/prompts';
+import gradient from 'gradient-string';
 import pc from 'picocolors';
 
 export type WizardConfig = {
@@ -6,6 +7,12 @@ export type WizardConfig = {
   port: string;
   delay: string;
   watch: boolean;
+};
+
+// Logo width is approx 44 characters
+const centerPad = (text: string, width = 44) => {
+  const padding = Math.max(0, Math.floor((width - text.length) / 2));
+  return ' '.repeat(padding) + text;
 };
 
 export async function runWizard(): Promise<WizardConfig> {
@@ -18,15 +25,15 @@ export async function runWizard(): Promise<WizardConfig> {
 ▐▙▄▄▄▖▐▙▄▄▖▐▌ ▐▌▝▚▄▞▘▐▌  ▐▌▝▚▄▞▘▝▚▄▄▖▐▌ ▐▌
 `;
 
-  console.log(pc.bold(pc.white(logo)));
-  console.log("  " + pc.bold(pc.white("Zero-Mock By Xircons")));
-  console.log("  " + pc.dim("Zero-config REST API setup in seconds"));
-  console.log("  " + pc.dim("Creates the local server, mounts the JSON, and simulates latency.\n"));
+  console.log(gradient(['#020617', '#1e3a8a', '#3b82f6'])(logo));
+  console.log(centerPad(pc.bold(pc.white("Zero-Mock By xirconsss"))));
+  console.log(centerPad(pc.dim("Zero-config REST API setup in seconds")));
+  console.log(centerPad(pc.dim("Creates the local server, mounts the JSON, and simulates latency.\n"), 66)); // wider line
 
-  console.log(`  Target File ./example/db.json ${pc.dim('[x]')}`);
-  console.log(`  Default Port 8080 ${pc.dim('[x]')}`);
-  console.log(`  Latency 200ms (Realistic) ${pc.dim('[x]')}`);
-  console.log(`  Watch Mode Active ${pc.dim('[x]')}\n`);
+  console.log(`  Target File ./example/db.json ${pc.dim('[✔]')}`);
+  console.log(`  Default Port 8080 ${pc.dim('[✔]')}`);
+  console.log(`  Latency 200ms (Realistic) ${pc.dim('[✔]')}`);
+  console.log(`  Watch Mode Active ${pc.dim('[✔]')}\n`);
 
   const choice = await select({
     message: 'What would you like to do?',
@@ -78,7 +85,7 @@ export async function runWizard(): Promise<WizardConfig> {
     default: true,
   });
 
-  console.log(`\n  ${pc.dim('[x]')} Configuration updated.`);
+  console.log(`\n  ${pc.dim('[✔]')} Configuration updated.`);
   console.clear();
 
   return { file, port, delay, watch };
