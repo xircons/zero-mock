@@ -1,89 +1,59 @@
 import { randomBytes } from "crypto";
 import { dirname, join } from "path";
-import { access, readFile, rename, unlink, writeFile } from "fs/promises";
+import { readFile, rename, unlink, writeFile } from "fs/promises";
 import type { JsonData } from "../types";
+import { printError, printFatal } from "../errors";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function parseJsonStorePayload(raw: string, filePath: string): JsonData {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Invalid JSON in "${filePath}": ${message}`);
-  }
-
-  if (!isPlainObject(parsed)) {
-    throw new Error(
-      `JSON root in "${filePath}" must be a non-null object (got ${parsed === null ? "null" : Array.isArray(parsed) ? "array" : typeof parsed}).`,
-    );
-  }
-
-  const data: JsonData = {};
-  for (const [key, value] of Object.entries(parsed)) {
-    if (!Array.isArray(value)) {
-      throw new Error(
-        `Invalid mock database shape in "${filePath}": property "${key}" must be an array.`,
-      );
-    }
-    data[key] = value as unknown[];
-  }
-  return data;
-}
-
 class JsonStoreImpl {
   private data: JsonData = {};
   private backingPath: string | null = null;
-  private lockPath: string | null = null;
   /** Serializes concurrent save() calls so writes are not interleaved. */
   private saveChain: Promise<void> = Promise.resolve();
 
-  async load(filePath: string): Promise<void> {
-    const lockPath = filePath + ".zero-mock.lock";
-    try {
-      await access(lockPath);
-      console.warn(
-        `[warn] Lock file found: "${lockPath}". ` +
-        `Another zero-mock process may be running on this file. ` +
-        `If not, delete the lock file and retry.`,
-      );
-    } catch {
-      await writeFile(lockPath, String(process.pid), "utf8");
-      this.lockPath = lockPath;
-      this._registerLockCleanup();
-    }
-
+  async load(filePath: string, isReload = false): Promise<void> {
     let raw: string;
     try {
       raw = await readFile(filePath, "utf8");
-    } catch (err) {
-      const code = err && typeof err === "object" && "code" in err ? String((err as NodeJS.ErrnoException).code) : "";
-      const message = err instanceof Error ? err.message : String(err);
-      throw new Error(
-        code
-          ? `Could not read JSON file "${filePath}" (${code}): ${message}`
-          : `Could not read JSON file "${filePath}": ${message}`,
-      );
+    } catch (err: any) {
+      if (isReload) throw new Error(`Unreadable: ${err.message}`);
+      printFatal('FILE_UNREADABLE', err.message);
     }
 
-    this.data = parseJsonStorePayload(raw, filePath);
-    this.backingPath = filePath;
-  }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err: any) {
+      if (isReload) throw new Error(`Parse error: ${err.message}`);
+      printFatal('JSON_INVALID', err.message);
+    }
 
-  private _registerLockCleanup(): void {
-    const cleanup = (): void => {
-      if (this.lockPath) {
-        try {
-          require("fs").unlinkSync(this.lockPath);
-        } catch (_) {}
+    if (!isPlainObject(parsed)) {
+      const msg = `got ${parsed === null ? "null" : Array.isArray(parsed) ? "array" : typeof parsed}`;
+      if (isReload) throw new Error(`Root not an object (${msg})`);
+      printFatal('JSON_NOT_OBJECT', msg);
+    }
+
+    const keys = Object.keys(parsed);
+    if (keys.length === 0) {
+      printError('JSON_EMPTY');
+    }
+
+    const data: JsonData = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (!Array.isArray(value)) {
+        const msg = `property "${key}" must be an array.`;
+        if (isReload) throw new Error(msg);
+        printFatal('JSON_INVALID', msg);
       }
-    };
-    process.once("exit", cleanup);
-    process.once("SIGINT", () => { cleanup(); process.exit(130); });
-    process.once("SIGTERM", () => { cleanup(); process.exit(143); });
+      data[key] = value as unknown[];
+    }
+    
+    this.data = data;
+    this.backingPath = filePath;
   }
 
   getData(): JsonData {

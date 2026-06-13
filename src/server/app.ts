@@ -2,6 +2,7 @@ import type { Application, ErrorRequestHandler, NextFunction, Request, Response 
 import cors from "cors";
 import express from "express";
 import { buildDynamicRouter } from "./routes/dynamicRouter";
+import { requestLoggingMiddleware } from "./logger";
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (res.headersSent) {
@@ -17,13 +18,6 @@ export type CreateAppOptions = {
   corsMethods?: string;
   corsCredentials?: boolean;
 };
-
-function requestLoggingMiddleware(req: Request, res: Response, next: NextFunction): void {
-  res.on("finish", () => {
-    console.log(`[${req.method}] ${req.path} - ${res.statusCode}`);
-  });
-  next();
-}
 
 function delayMiddleware(delayMs: number) {
   return (_req: Request, _res: Response, next: NextFunction): void => {
