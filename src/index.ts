@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import chokidar from "chokidar";
+import pc from "picocolors";
 import { Command } from "commander";
 import { JsonStore } from "./store/jsonStore";
 import { bootstrap } from "./server/bootstrap";
 import { runWizard } from "./cli-wizard";
+import { validateConfig, acquireLock, printError, printFatal } from "./errors";
 
 type CliOpts = {
   file?: string;
@@ -81,12 +83,6 @@ program
     }
 
     const port = Number.parseInt(portRaw, 10);
-    if (Number.isNaN(port) || port < 1 || port > 65535) {
-      console.error("error: --port must be a number between 1 and 65535");
-      process.exit(1);
-      return;
-    }
-
     const delayMs = parseDelayMs(delayRaw);
     if (delayMs === null) {
       console.error("error: --delay must be a non-negative integer");
@@ -96,13 +92,16 @@ program
 
     const filePath = file;
 
+    // Ordered Validation Step 1 & 2
+    validateConfig(filePath, port);
+    acquireLock(filePath);
+
     try {
       await JsonStore.load(filePath);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(message);
-      process.exit(1);
-      return;
+    } catch (err: any) {
+      // JsonStore.load handles its own printFatal internally, 
+      // but we catch to ensure we don't crash without formatting.
+      printFatal('UNKNOWN', err.message);
     }
 
     try {
@@ -112,11 +111,9 @@ program
         corsMethods: opts.corsMethods,
         corsCredentials: opts.corsCredentials,
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`Failed to start server: ${message}`);
-      process.exit(1);
-      return;
+    } catch (err: any) {
+      // Bootstrap will handle EADDRINUSE internally, catching just in case.
+      printFatal('UNKNOWN', err.message);
     }
 
     if (watch) {
