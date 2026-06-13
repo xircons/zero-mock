@@ -1,5 +1,6 @@
 import { select, input, confirm } from '@inquirer/prompts';
 import pc from 'picocolors';
+import { loadSavedConfig, saveConfig, formatSavedAt, SavedConfig } from './config-store';
 
 export const PANEL_W = 42;
 
@@ -26,7 +27,7 @@ export type WizardConfig = {
   watch: boolean;
 };
 
-export function renderConfigPanel(config: WizardConfig): string {
+export function renderConfigPanel(config: WizardConfig, saved?: SavedConfig | null): string {
   let out = pc.dim('╭' + '─'.repeat(PANEL_W) + '╮\n');
 
   const rows = [
@@ -39,14 +40,19 @@ export function renderConfigPanel(config: WizardConfig): string {
   for (const row of rows) {
     const labelPadded = ` · ${row.label} `.padEnd(20, ' ');
     const valRaw = row.value;
-    // Calculate spaces needed so that internal length is exactly PANEL_W
-    // Inner length = labelPadded.length (20) + valRaw.length + spaces + " ✓ ".length (3)
     const spaceCount = Math.max(0, PANEL_W - labelPadded.length - valRaw.length - 3);
     const spaces = ' '.repeat(spaceCount);
     
     out += pc.dim('│') + pc.dim(labelPadded) + pc.white(row.value) + spaces + ' ' + pc.green('✓') + ' ' + pc.dim('│') + '\n';
   }
   
+  if (saved) {
+    out += pc.dim('├' + '─'.repeat(PANEL_W) + '┤\n');
+    const footerText = `last used ${formatSavedAt(saved.savedAt)}`;
+    const footerPadded = ` · ${footerText} `.padEnd(PANEL_W, ' ');
+    out += pc.dim('│') + pc.dim(footerPadded) + pc.dim('│') + '\n';
+  }
+
   out += pc.dim('╰' + '─'.repeat(PANEL_W) + '╯');
   return out;
 }
@@ -58,8 +64,19 @@ const hex = (hexCode: string, text: string) => {
   return `\x1b[38;2;${r};${g};${b}m${text}\x1b[39m`;
 };
 
+const FALLBACK: WizardConfig = {
+  file: './example/db.json',
+  port: '8080',
+  delay: '200',
+  watch: true,
+};
+
 export async function runWizard(): Promise<WizardConfig> {
   console.clear();
+  
+  const saved = loadSavedConfig();
+  const defaults = saved ?? FALLBACK;
+  const isReturning = saved !== null;
 
   const logoTop =    hex('#bfdbfe', '  ▗▄▄▄▄▖▗▄▄▄▖▗▄▄▖  ▗▄▖ ▗▖  ▗▖ ▗▄▖  ▗▄▄▖▗▖ ▗▖');
   const logoMid1 =   hex('#60a5fa', '     ▗▞▘▐▌   ▐▌ ▐▌▐▌ ▐▌▐▛▚▞▜▌▐▌ ▐▌▐▌   ▐▌▗▞▘');
@@ -70,13 +87,12 @@ export async function runWizard(): Promise<WizardConfig> {
   
   console.log(centerPad(pc.bold(pc.white("Zero-Mock By Xircons"))));
   console.log(centerPad(pc.dim("Zero-config REST API setup in seconds")));
+  
+  if (isReturning && saved) {
+    console.log(centerPad(pc.dim(`last session ${formatSavedAt(saved.savedAt)}`)));
+  }
 
-  console.log('\n' + renderConfigPanel({
-    file: './example/db.json',
-    port: '8080',
-    delay: '200',
-    watch: true,
-  }) + '\n');
+  console.log('\n' + renderConfigPanel(defaults, saved) + '\n');
 
   const promptTheme = { prefix: pc.blue('◆') };
 
@@ -98,21 +114,21 @@ export async function runWizard(): Promise<WizardConfig> {
 
   if (choice === 'continue') {
     console.clear();
-    return {
-      file: './example/db.json',
-      port: '8080',
-      delay: '200',
-      watch: true,
-    };
+    saveConfig(defaults, saved);
+    return defaults;
   }
 
   // Change configuration
   console.clear();
   console.log('\n' + sectionHeader('CUSTOM CONFIGURATION'));
+  
+  if (isReturning) {
+    console.log(pc.dim('Pre-filled from last session — press Enter to keep\n'));
+  }
 
   const file = await input({
     message: 'Target File Path:',
-    default: './example/db.json',
+    default: defaults.file,
     theme: promptTheme,
     validate: (value) => {
       if (!value.trim()) return "File path cannot be empty.";
@@ -123,7 +139,7 @@ export async function runWizard(): Promise<WizardConfig> {
 
   const port = await input({
     message: 'Port Number:',
-    default: '8080',
+    default: defaults.port,
     theme: promptTheme,
     validate: (value) => {
       const p = parseInt(value, 10);
@@ -134,7 +150,7 @@ export async function runWizard(): Promise<WizardConfig> {
 
   const delay = await input({
     message: 'Simulated Latency (ms):',
-    default: '200',
+    default: defaults.delay,
     theme: promptTheme,
     validate: (value) => {
       const d = parseInt(value, 10);
@@ -145,12 +161,15 @@ export async function runWizard(): Promise<WizardConfig> {
 
   const watch = await confirm({
     message: 'Enable Watch Mode (auto-reload on save)?',
-    default: true,
+    default: defaults.watch,
     theme: promptTheme,
   });
+
+  const newConfig = { file, port, delay, watch };
+  saveConfig(newConfig, saved);
 
   console.log(`\n  ${pc.green('✓')} Configuration updated.`);
   console.clear();
 
-  return { file, port, delay, watch };
+  return newConfig;
 }

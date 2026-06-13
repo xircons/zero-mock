@@ -6,6 +6,7 @@ import { JsonStore } from "./store/jsonStore";
 import { bootstrap } from "./server/bootstrap";
 import { runWizard } from "./cli-wizard";
 import { validateConfig, acquireLock, printError, printFatal } from "./errors";
+import { clearSavedConfig } from "./config-store";
 
 type CliOpts = {
   file?: string;
@@ -15,6 +16,7 @@ type CliOpts = {
   corsOrigin?: string;
   corsMethods?: string;
   corsCredentials?: boolean;
+  reset?: boolean;
 };
 
 function parseDelayMs(raw: string): number | null {
@@ -62,7 +64,12 @@ program
   .option("--cors-origin <origins>", "comma-separated list of allowed origins (e.g., http://localhost:3000)", "*")
   .option("--cors-methods <methods>", "comma-separated list of allowed HTTP methods", "GET,HEAD,PUT,PATCH,POST,DELETE")
   .option("--cors-credentials", "enable CORS credentials (cookies, authorization headers)", false)
+  .option("--reset", "clear saved wizard configuration")
   .action(async (opts: CliOpts) => {
+    if (opts.reset) {
+      clearSavedConfig();
+    }
+    
     let { file, port: portRaw, delay: delayRaw, watch } = opts;
 
     if (!file && !portRaw && !delayRaw && watch === undefined) {
