@@ -4,11 +4,22 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?logo=typescript&logoColor=white)](tsconfig.json)
 [![npm version](https://img.shields.io/npm/v/@xirconsss/zero-mock.svg)](https://www.npmjs.com/package/@xirconsss/zero-mock)
 
-**zero-mock** is a zero-config Node.js CLI that turns a JSON file into a local REST API. Point it at a file whose top-level keys are **collection names** and whose values are **arrays of records**—it serves full CRUD routes and writes changes back to disk. Built for **frontend developers** who need a quick, realistic backend for prototypes, demos, and integration tests without standing up a database or bespoke server.
+**zero-mock** is a zero-config Node.js CLI that turns any JSON file into a persistent, production-grade REST API in seconds. It includes an interactive setup wizard, a high-contrast brutalist UI, and smart schema inference with automatic validation.
 
-## Demo
+Built for frontend developers and architects who need a realistic, stable backend for prototypes, demos, and integration tests without the overhead of database orchestration.
 
-![Terminal demo](docs/demo.gif)
+## Key Features
+
+- **Zero-config** — your JSON file is your database and API definition.
+- **Interactive wizard** — run `zero-mock` to start the setup guide.
+- **Smart validation** — automatically infers Zod schemas from your data to validate `POST`, `PUT`, and `PATCH` requests.
+- **Atomic and secure** — cross-platform atomic writes (Windows-safe) with file-locking to prevent data corruption.
+- **Advanced REST** — supports filtering (`_gte`, `_lte`, `_like`), sorting (`_sort`, `_order`), and pagination (`_page`, `_limit`).
+- **Realistic simulation** — simulate network latency and configure custom CORS origins/methods.
+- **Watch mode** — hot-reloads data from disk on manual file changes without a server restart.
+- **Session memory** — remembers your last used configuration for a faster workflow.
+
+---
 
 ## Installation
 
@@ -18,127 +29,118 @@
 npm install -g @xirconsss/zero-mock
 ```
 
-Run the CLI as **`zero-mock`** (see [Usage](#usage)).
+Run the CLI as `zero-mock`.
 
 ### One-off with npx
 
 ```bash
-npx @xirconsss/zero-mock -f ./example/db.json -p 3000
+npx @xirconsss/zero-mock
 ```
 
-If your shell or npm version forwards extra flags to npm instead of the CLI, insert **`--`** before the first CLI flag (e.g. `npx @xirconsss/zero-mock -- -f ./data.json -p 3000 -w`).
+---
 
 ## Usage
 
+### 1. Interactive mode (recommended)
+
+Run the command without arguments to launch the setup wizard:
+
+```bash
+zero-mock
+```
+
+### 2. Manual CLI
+
+Pass flags to skip the wizard:
+
+```bash
+zero-mock -f ./data.json -p 8080 -w -d 200
+```
+
 | Flag | Description |
 | ---- | ----------- |
-| **`-f` / `--file`** | Required. Path to the JSON file. |
-| **`-p` / `--port`** | HTTP port (default `3000`, must be 1–65535). |
-| **`-d` / `--delay`** | Optional. Delay every request by this many milliseconds. Must be a non-negative integer using digits only (default `0`). |
-| **`-w` / `--watch`** | Optional. Watch the JSON file and reload the in-memory data when it changes. If a save produces invalid JSON, the server prints `[watch] Could not reload "<path>": ...` to stderr and keeps the last good data until the file is valid again. Only one reload runs at a time. When watch starts, you also get `[watch] Watching "<path>" for changes.` on stdout. |
+| `-f`, `--file` | Path to the source JSON file. |
+| `-p`, `--port` | HTTP port (default `3000`, must be 1024–65535). |
+| `-d`, `--delay` | Delay every request by X milliseconds (default `0`). |
+| `-w`, `--watch` | Enable hot-reloading on manual file changes. |
+| `--cors-origin` | Comma-separated allowed origins (default `*`). |
+| `--reset` | Clear saved wizard configuration and exit. |
 
-Examples:
-
-```bash
-zero-mock -f ./data.json -p 3000 -d 200
-zero-mock -f ./data.json -w
-```
-
-## Quick start
-
-From the repo root (or any directory containing the example file):
-
-```bash
-npx @xirconsss/zero-mock -f ./example/db.json -p 3000
-```
-
-Optional:
-
-```bash
-npx @xirconsss/zero-mock -f ./example/db.json -p 3000 -d 200 -w
-```
-
-In another terminal:
-
-```bash
-curl http://localhost:3000/users
-curl http://localhost:3000/users/1
-```
-
-The server logs the exact URLs for each collection when it starts.
-
-## Development
-
-From a clone: `npm install`, then `npm run build` (or `npm run dev` with `ts-node`). Run the built CLI with:
-
-```bash
-node dist/index.js -f ./example/db.json -p 3000
-```
-
-Add `-d` / `-w` the same way as the published CLI.
-
-## Features
-
-- **Zero-config** — one JSON file defines your API surface; no schemas or generators to run.
-- **Full CRUD REST API** — `GET`, `POST`, `PUT`, `PATCH`, and `DELETE` per collection, with CORS and JSON bodies enabled.
-- **Atomic file persistence** — writes go through a temp file and rename, with serialized saves so concurrent requests do not corrupt the file.
-- **Smart ID generation** — new rows get the next **numeric** id when existing ids are integers or all-digit strings; otherwise new ids use a **UUID**.
-- **Request logging** — each finished request logs as `[METHOD] <path> - <status>` (path is Express `req.path`, no query string).
-- **Optional delay** — `-d` adds a fixed pause before route handling (after JSON body parsing).
-- **List filtering and pagination** — see [List GET](#list-get) on `GET /{resource}`.
-- **Watch mode** — `-w` reloads data from disk on file change without restarting the process (see [Usage](#usage)).
+---
 
 ## Auto-generated API
 
-Each **top-level key** in your JSON (e.g. `users`, `posts`) becomes a **resource** name. Replace `{resource}` with that key and `{id}` with a row’s `id` (string params match numeric ids loosely).
+The tool generates full CRUD endpoints for every top-level key in your JSON (e.g., `users`, `posts`).
 
-| Method   | Path                 | Description |
-| -------- | -------------------- | ----------- |
-| `GET`    | `/{resource}`        | List items (optionally [filtered and paginated](#list-get)). |
-| `POST`   | `/{resource}`        | Create an item; server assigns `id` and returns `201` with the new body. |
-| `GET`    | `/{resource}/{id}`   | Return one item by `id`; `404` if missing. |
-| `PUT`    | `/{resource}/{id}`   | Replace the item; `id` in the URL wins; `404` if missing. |
-| `PATCH`  | `/{resource}/{id}`   | Shallow-merge fields into the item; `404` if missing. |
-| `DELETE` | `/{resource}/{id}`   | Remove the item; `204` on success; `404` if missing. |
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| `GET` | `/{resource}` | List items (supports filtering, sorting, paging). |
+| `POST` | `/{resource}` | Create item (auto-id + schema validation). |
+| `GET` | `/{resource}/{id}` | Return a single item by `id`. |
+| `PUT` | `/{resource}/{id}` | Replace item (schema validation). |
+| `PATCH` | `/{resource}/{id}` | Partial update (schema validation). |
+| `DELETE` | `/{resource}/{id}` | Remove item. |
 
-Invalid JSON bodies (non-objects for write routes) receive **`400`** with a JSON error message. Persistence failures surface as **`500`**.
+### Advanced List Features
 
-### List GET
+**Filtering**
 
-**Filtering:** Every query parameter except `_page` and `_limit` is a filter. Only plain-object rows are kept. For each filter key, the row must have that property, and the value must match the query value with loose equality (`==`). Query values are strings (first value wins if repeated). Rows missing a filter key are dropped.
+- `GET /posts?category=tech` — exact match
+- `GET /posts?views_gte=100` — greater than or equal
+- `GET /posts?title_like=hello` — case-insensitive search
 
-**Pagination:** If **both** `_page` and `_limit` are present and are positive integers (digit strings only), the list is sliced after filtering. `_page` is 1-based. If either is missing or invalid, the full filtered list is returned (no error).
+**Sorting**
 
-Examples using [example/db.json](example/db.json):
+- `GET /posts?_sort=createdAt&_order=desc`
 
-```bash
-curl 'http://localhost:3000/users?role=admin'
-curl 'http://localhost:3000/users?_page=1&_limit=2'
+**Pagination**
+
+- `GET /posts?_page=1&_limit=10`
+- Returns an `X-Total-Count` header and a wrapped `{ data, pagination }` object.
+
+---
+
+## JSON Structure
+
+The root must be an object, and every resource must be an array.
+
+```json
+{
+  "users": [
+    { "id": 1, "name": "Alice", "role": "admin" },
+    { "id": 2, "name": "Bob" }
+  ]
+}
 ```
 
-## JSON file shape
+Note: zero-mock automatically infers that `role` is an optional string based on the items above.
 
-The root must be a JSON **object**. Each property must be an **array** (your “tables”). Each item you want to address by URL should include an **`id`** field (number or string).
+---
 
-## Publishing to npm (maintainers)
+## Development
 
-**Release flow (recommended):** Automated via `semantic-release`. Commits following the conventional commit format (e.g., `feat:`, `fix:`) pushed to `main` will automatically trigger a version bump, changelog generation, and NPM publish via the [`.github/workflows/publish-npm.yml`](.github/workflows/publish-npm.yml) workflow. Avoid running `npm publish` on your machine.
+1. Clone the repo.
+2. `npm install`
+3. `npm run dev` (runs with `ts-node`)
+4. `npm run build` (compiles to `dist/`)
 
-1. Use an [npmjs.com](https://www.npmjs.com/) account with **2FA** enabled and permission to publish the **`@xirconsss`** scope (user or org on npm).
-2. **GitHub:** repo → **Settings** → **Environments** → **`NPM_TOKEN`** → add secret **`NPM_TOKEN`** (see token steps below). The workflow uses that environment on each run.
-3. Push conventional commits to **`main`**, wait for **Publish to npm** to finish. Check with `npm view @xirconsss/zero-mock version`.
+---
 
-**Token on npm (required for CI):**
+## Publishing (Maintainers)
 
-1. Create a classic **[Automation](https://docs.npmjs.com/creating-and-viewing-access-tokens#creating-classic-tokens)** token, **or** a **[granular access token](https://docs.npmjs.com/creating-and-viewing-access-tokens#creating-granular-access-tokens)** with **read and write** on **`@xirconsss/zero-mock`** (and org **`xirconsss`** if npm asks).
-2. For granular tokens: turn **Bypass two-factor authentication (2FA)** **on** so CI does not hit **`EOTP`**. Do **not** use **`NPM_OTP`** secrets (codes expire in ~30 seconds).
-3. Paste the token into the **`NPM_TOKEN`** environment secret on GitHub.
+This project uses `semantic-release` for fully automated versioning and npm publishing.
 
-**Optional — OIDC trusted publishing:** You can later move to [npm trusted publishing](https://docs.npmjs.com/trusted-publishers) and drop the secret; if you see **`E404`** on `PUT` with OIDC, the Trusted Publisher settings on npm (repo, workflow filename, environment name) do not match this workflow—token auth avoids that until it is configured correctly.
+1. Ensure your commits follow the [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat:`, `fix:`, `chore:`).
+2. Push or open a PR against the `main` branch.
+3. GitHub Actions handles testing, version bumping, changelog generation, and publishing to npm.
+
+---
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
+
+---
 
 ## Links
 
