@@ -128,11 +128,11 @@ export function acquireLock(file: string): void {
   }
 
   const cleanup = () => {
-    if (fs.existsSync(lockFilePath)) {
-      try {
+    try {
+      if (fs.existsSync(lockFilePath)) {
         fs.unlinkSync(lockFilePath);
-      } catch (_) {}
-    }
+      }
+    } catch (_) { /* ignore cleanup errors */ }
   };
   
   process.on('exit', cleanup);

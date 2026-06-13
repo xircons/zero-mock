@@ -46,7 +46,7 @@ export function saveConfig(config: WizardConfig, prev: SavedConfig | null): void
     const savedConfig: SavedConfig = {
       ...config,
       savedAt: new Date().toISOString(),
-      useCount: (prev?.useCount || 0) + 1,
+      useCount: Math.min((prev?.useCount || 0) + 1, 99999),
     };
     
     fs.writeFileSync(configPath, JSON.stringify(savedConfig, null, 2), 'utf8');
