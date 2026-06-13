@@ -1,5 +1,4 @@
 import { select, input, confirm } from '@inquirer/prompts';
-import gradient from 'gradient-string';
 import pc from 'picocolors';
 
 export type WizardConfig = {
@@ -13,20 +12,21 @@ export async function runWizard(): Promise<WizardConfig> {
   console.clear();
 
   const logo = `
-  ______ _______  ______  _____      _______  _____  _______ _     _
-   ____/ |______ |_____/ |     | ___ |  |  | |     | |       |____/ 
-  /_____ |______ |    \\_ |_____|     |  |  | |_____| |_____  |    \\_
+▗▄▄▄▄▖▗▄▄▄▖▗▄▄▖  ▗▄▖ ▗▖  ▗▖ ▗▄▖  ▗▄▄▖▗▖ ▗▖
+   ▗▞▘▐▌   ▐▌ ▐▌▐▌ ▐▌▐▛▚▞▜▌▐▌ ▐▌▐▌   ▐▌▗▞▘
+ ▗▞▘  ▐▛▀▀▘▐▛▀▚▖▐▌ ▐▌▐▌  ▐▌▐▌ ▐▌▐▌   ▐▛▚▖ 
+▐▙▄▄▄▖▐▙▄▄▖▐▌ ▐▌▝▚▄▞▘▐▌  ▐▌▝▚▄▞▘▝▚▄▄▖▐▌ ▐▌
 `;
 
-  console.log(gradient(['#020617', '#1e3a8a', '#3b82f6'])(logo));
+  console.log(pc.bold(pc.white(logo)));
   console.log("  " + pc.bold(pc.white("Zero-Mock By Xircons")));
   console.log("  " + pc.dim("Zero-config REST API setup in seconds"));
   console.log("  " + pc.dim("Creates the local server, mounts the JSON, and simulates latency.\n"));
 
-  console.log(`  Target File ./example/db.json ${pc.green('✓')}`);
-  console.log(`  Default Port 8080 ${pc.green('✓')}`);
-  console.log(`  Latency 200ms (Realistic) ${pc.green('✓')}`);
-  console.log(`  Watch Mode Active ${pc.green('✓')}\n`);
+  console.log(`  Target File ./example/db.json ${pc.dim('[x]')}`);
+  console.log(`  Default Port 8080 ${pc.dim('[x]')}`);
+  console.log(`  Latency 200ms (Realistic) ${pc.dim('[x]')}`);
+  console.log(`  Watch Mode Active ${pc.dim('[x]')}\n`);
 
   const choice = await select({
     message: 'What would you like to do?',
@@ -55,7 +55,7 @@ export async function runWizard(): Promise<WizardConfig> {
 
   // Change configuration
   console.clear();
-  console.log(`  ${pc.bold('CUSTOM CONFIGURATION')}`);
+  console.log(`  ${pc.bold(pc.white('CUSTOM CONFIGURATION'))}`);
   console.log(pc.dim('  ─────────────────────────────────────────────────────────────'));
 
   const file = await input({
@@ -78,7 +78,7 @@ export async function runWizard(): Promise<WizardConfig> {
     default: true,
   });
 
-  console.log(`\n  ${pc.green('✔')} Configuration updated.`);
+  console.log(`\n  ${pc.dim('[x]')} Configuration updated.`);
   console.clear();
 
   return { file, port, delay, watch };
