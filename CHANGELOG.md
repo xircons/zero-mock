@@ -1,3 +1,18 @@
+# [1.2.0](https://github.com/xircons/zero-mock/compare/v1.1.0...v1.2.0) (2026-06-13)
+
+
+### Bug Fixes
+
+* implement 8 core system refinements (DoS protection, Windows I/O, memory leaks) ([fd5b5ea](https://github.com/xircons/zero-mock/commit/fd5b5ea105171b70bc2d25118647770ac6a22a9c))
+
+
+### Features
+
+* centralize robust error handling and locking mechanisms ([b991c8a](https://github.com/xircons/zero-mock/commit/b991c8aec35c752754884a28510310b1050c5c4a))
+* interactive cli wizard and minimalist server ui ([b54c544](https://github.com/xircons/zero-mock/commit/b54c544fff6265d2cf22fd37350577501e704189))
+* persistent wizard config memory via config.json ([39c5b03](https://github.com/xircons/zero-mock/commit/39c5b0317632205ce9b2f530d3c3b0fe342cd70b))
+* vertical discrete gradient logo and strict wizard input validation ([4b3186c](https://github.com/xircons/zero-mock/commit/4b3186c102965885a09f2830fe79e1a40bd1b851))
+
 # [1.1.0](https://github.com/xircons/zero-mock/compare/v1.0.0...v1.1.0) (2026-06-12)
 
 
