@@ -3,12 +3,13 @@ import chokidar from "chokidar";
 import { Command } from "commander";
 import { JsonStore } from "./store/jsonStore";
 import { bootstrap } from "./server/bootstrap";
+import { runWizard } from "./cli-wizard";
 
 type CliOpts = {
-  file: string;
-  port: string;
-  delay: string;
-  watch: boolean;
+  file?: string;
+  port?: string;
+  delay?: string;
+  watch?: boolean;
   corsOrigin?: string;
   corsMethods?: string;
   corsCredentials?: boolean;
@@ -45,8 +46,6 @@ function startFileWatcher(filePath: string): void {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[watch] Watcher error: ${msg}`);
     });
-
-  console.log(`[watch] Watching "${filePath}" for changes.`);
 }
 
 const program = new Command();
@@ -54,29 +53,48 @@ const program = new Command();
 program
   .name("zero-mock")
   .description("Generate a REST API from a JSON file")
-  .requiredOption("-f, --file <path>", "path to the source JSON file")
-  .option("-p, --port <number>", "HTTP port", "3000")
-  .option("-d, --delay <ms>", "delay each request by this many ms (0 = off)", "0")
-  .option("-w, --watch", "reload JSON from disk when the file changes", false)
+  .option("-f, --file <path>", "path to the source JSON file")
+  .option("-p, --port <number>", "HTTP port")
+  .option("-d, --delay <ms>", "delay each request by this many ms (0 = off)")
+  .option("-w, --watch", "reload JSON from disk when the file changes")
   .option("--cors-origin <origins>", "comma-separated list of allowed origins (e.g., http://localhost:3000)", "*")
   .option("--cors-methods <methods>", "comma-separated list of allowed HTTP methods", "GET,HEAD,PUT,PATCH,POST,DELETE")
   .option("--cors-credentials", "enable CORS credentials (cookies, authorization headers)", false)
   .action(async (opts: CliOpts) => {
-    const port = Number.parseInt(opts.port, 10);
+    let { file, port: portRaw, delay: delayRaw, watch } = opts;
+
+    if (!file && !portRaw && !delayRaw && watch === undefined) {
+      const wizardConfig = await runWizard();
+      file = wizardConfig.file;
+      portRaw = wizardConfig.port;
+      delayRaw = wizardConfig.delay;
+      watch = wizardConfig.watch;
+    } else {
+      if (!file) {
+        console.error("error: required option '-f, --file <path>' not specified");
+        process.exit(1);
+        return;
+      }
+      portRaw = portRaw ?? "3000";
+      delayRaw = delayRaw ?? "0";
+      watch = watch ?? false;
+    }
+
+    const port = Number.parseInt(portRaw, 10);
     if (Number.isNaN(port) || port < 1 || port > 65535) {
       console.error("error: --port must be a number between 1 and 65535");
       process.exit(1);
       return;
     }
 
-    const delayMs = parseDelayMs(opts.delay);
+    const delayMs = parseDelayMs(delayRaw);
     if (delayMs === null) {
       console.error("error: --delay must be a non-negative integer");
       process.exit(1);
       return;
     }
 
-    const filePath = opts.file;
+    const filePath = file;
 
     try {
       await JsonStore.load(filePath);
@@ -88,7 +106,7 @@ program
     }
 
     try {
-      await bootstrap(port, { 
+      await bootstrap(port, filePath, watch, { 
         delayMs,
         corsOrigin: opts.corsOrigin,
         corsMethods: opts.corsMethods,
@@ -101,7 +119,7 @@ program
       return;
     }
 
-    if (opts.watch) {
+    if (watch) {
       startFileWatcher(filePath);
     }
   });
