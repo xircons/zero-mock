@@ -82,7 +82,8 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.5 }}
-            className="mb-12 w-full bg-white text-black px-[18px] py-[12px] text-[13px] font-medium transition-colors hover:bg-white group flex items-center justify-center gap-1"
+            onClick={() => window.location.href = "/login"}
+            className="mb-12 w-full bg-white text-black px-[18px] py-[12px] text-[13px] font-medium transition-colors hover:bg-white group flex items-center justify-center gap-1 cursor-pointer"
           >
             <span className="inline-flex items-center gap-3 transition-transform duration-200 group-hover:translate-x-1">
               <span>&gt;</span>

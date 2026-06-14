@@ -4,8 +4,11 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function Navbar() {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isLightSection, setIsLightSection] = useState(false);
@@ -45,6 +48,13 @@ export function Navbar() {
     };
   }, [menuOpen]);
 
+  const hideNavbarOn = ["/dashboard", "/projects", "/recovery", "/terms", "/privacy"];
+  const shouldHide = hideNavbarOn.some(path => pathname?.startsWith(path));
+
+  if (shouldHide) {
+    return null;
+  }
+
   return (
     <>
       <nav
@@ -53,7 +63,7 @@ export function Navbar() {
           !menuOpen && scrolled ? (isLightSection ? "bg-surface-light/85 backdrop-blur-xl border-b border-border-light-subtle py-2 md:py-4" : "bg-surface-primary/85 backdrop-blur-xl border-b border-border-subtle py-3 md:py-4") : "bg-transparent"
         )}
       >
-        <div className="relative transition-all duration-300 w-[200px] h-10 md:h-12">
+        <Link href="/" className="relative transition-all duration-300 w-[200px] h-10 md:h-12 cursor-pointer block">
           <Image
             src="/logo/zero-mock-white-logo.png"
             alt="zero-mock"
@@ -74,7 +84,7 @@ export function Navbar() {
               !menuOpen && isLightSection ? "opacity-100" : "opacity-0"
             )}
           />
-        </div>
+        </Link>
 
         {/* Hamburger Toggle */}
         <button
@@ -130,28 +140,40 @@ export function Navbar() {
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 pt-16">
                 <div className="flex flex-col gap-2 md:gap-4">
                   <div className="text-[10px] uppercase tracking-widest text-text-dark-muted font-medium">QUICK LINKS</div>
-                  {["Home", "Pricing", "About", "Projects", "Articles", "Contact Us"].map((link) => (
-                    <a
-                      key={link}
-                      href="#"
+                  {[
+                    { label: "Home", href: "/" },
+                    { label: "Pricing", href: "#" },
+                    { label: "About", href: "#" },
+                    { label: "Projects", href: "/projects" },
+                    { label: "Articles", href: "#" },
+                    { label: "Contact Us", href: "#" }
+                  ].map((link) => (
+                    <Link
+                      key={link.label}
+                      href={link.href}
                       onClick={() => setMenuOpen(false)}
                       className="text-[28px] md:text-[36px] font-semibold tracking-tighter text-text-dark-primary border border-transparent transition-colors duration-200 hover:text-white hover:bg-surface-primary hover:border-border-subtle px-3 -mx-3"
                     >
-                      {link}
-                    </a>
+                      {link.label}
+                    </Link>
                   ))}
                 </div>
                 <div className="flex flex-col gap-2 md:gap-4">
                   <div className="text-[10px] uppercase tracking-widest text-text-dark-muted font-medium">OTHER LINKS</div>
-                  {["Terms & Conditions", "Privacy Policies", "Hire via Contra", "Book A Call"].map((link) => (
-                    <a
-                      key={link}
-                      href="#"
+                  {[
+                    { label: "Terms & Conditions", href: "/terms" },
+                    { label: "Privacy Policies", href: "/privacy" },
+                    { label: "Hire via Contra", href: "#" },
+                    { label: "Book A Call", href: "#" }
+                  ].map((link) => (
+                    <Link
+                      key={link.label}
+                      href={link.href}
                       onClick={() => setMenuOpen(false)}
                       className="text-[28px] md:text-[36px] font-semibold tracking-tighter text-text-dark-primary border border-transparent transition-colors duration-200 hover:text-white hover:bg-surface-primary hover:border-border-subtle px-3 -mx-3"
                     >
-                      {link}
-                    </a>
+                      {link.label}
+                    </Link>
                   ))}
                 </div>
               </div>

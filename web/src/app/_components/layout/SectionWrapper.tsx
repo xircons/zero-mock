@@ -58,7 +58,7 @@ export function SectionWrapper({
         </div>
       )}
 
-      <div className="max-w-[1280px] w-full mx-auto px-5 md:px-8 grid grid-cols-4 flex-1 relative z-10">
+      <div className="max-w-[1280px] w-full mx-auto mt-12 px-5 md:px-8 grid grid-cols-4 flex-1 relative z-10">
         {children}
       </div>
     </section>
