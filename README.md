@@ -138,7 +138,7 @@ This project uses `semantic-release` for fully automated versioning and npm publ
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+© 2026 Zero-mock. All rights reserved. Licensed under the [MIT License](LICENSE).
 
 ---
 
