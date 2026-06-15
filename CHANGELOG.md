@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/xircons/zero-mock/compare/v1.2.0...v1.2.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* enforce release for lock and temp file optimizations ([98cbd63](https://github.com/xircons/zero-mock/commit/98cbd6312e5bb7ff0f343c29ba677bb7e4fad25a))
+
 # [1.2.0](https://github.com/xircons/zero-mock/compare/v1.1.0...v1.2.0) (2026-06-13)
 
 
