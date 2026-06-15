@@ -32,4 +32,5 @@ Thumbs.db
 
 # Temp files
 *.tmp
-.zero-mock-*.tmp
+.zero-mock-tmp-*.json
+.zero-mock-bak-*.json
