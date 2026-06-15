@@ -1,6 +1,9 @@
 import pc from 'picocolors';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
+import crypto from 'crypto';
+import { registerLock } from './cleanup';
 
 export type ErrorCode = 
   | 'FILE_NOT_FOUND' 
@@ -86,7 +89,9 @@ export function validateConfig(file: string, port: number): void {
 }
 
 export function acquireLock(file: string): void {
-  const lockFilePath = `${file}.zero-mock.lock`;
+  const absoluteDbPath = path.resolve(file);
+  const hash = crypto.createHash('md5').update(absoluteDbPath).digest('hex');
+  const lockFilePath = path.join(os.tmpdir(), `zero-mock-${hash}.lock`);
   
   if (fs.existsSync(lockFilePath)) {
     try {
@@ -127,19 +132,5 @@ export function acquireLock(file: string): void {
     }
   }
 
-  const cleanup = () => {
-    try {
-      if (fs.existsSync(lockFilePath)) {
-        fs.unlinkSync(lockFilePath);
-      }
-    } catch (_) { /* ignore cleanup errors */ }
-  };
-  
-  process.on('exit', cleanup);
-  process.on('SIGINT', () => { cleanup(); process.exit(130); });
-  process.on('SIGTERM', () => { cleanup(); process.exit(143); });
-  process.on('uncaughtException', (err) => {
-    cleanup();
-    printFatal('SERVER_CRASH', err.message);
-  });
+  registerLock(lockFilePath);
 }
