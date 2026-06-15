@@ -7,6 +7,7 @@ import { bootstrap } from "./server/bootstrap";
 import { runWizard } from "./cli-wizard";
 import { validateConfig, acquireLock, printError, printFatal } from "./errors";
 import { clearSavedConfig } from "./config-store";
+import { registerCleanupTask } from "./cleanup";
 
 type CliOpts = {
   file?: string;
