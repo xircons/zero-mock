@@ -73,7 +73,7 @@ class JsonStoreImpl {
     const run = async (): Promise<void> => {
       const target = this.backingPath!;
       const dir = dirname(target);
-      const tmp = join(dir, `.zero-mock-${randomBytes(8).toString("hex")}.tmp`);
+      const tmp = join(dir, `.zero-mock-tmp-${randomBytes(8).toString("hex")}.json`);
       const payload = `${JSON.stringify(this.data, null, 2)}\n`;
       try {
         await writeFile(tmp, payload, "utf8");
