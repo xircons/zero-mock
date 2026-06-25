@@ -14,6 +14,12 @@ class JsonStoreImpl {
   private backingPath: string | null = null;
   /** Serializes concurrent save() calls so writes are not interleaved. */
   private saveChain: Promise<void> = Promise.resolve();
+  /** Epoch ms until which file-change events are treated as self-caused and ignored by the watcher. */
+  private selfWriteUntil = 0;
+
+  isSelfWrite(): boolean {
+    return Date.now() < this.selfWriteUntil;
+  }
 
   async load(filePath: string, isReload = false): Promise<void> {
     let raw: string;
@@ -87,6 +93,7 @@ class JsonStoreImpl {
             throw e;
           }
         }
+        this.selfWriteUntil = Date.now() + 600;
       } catch (err) {
         if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
         const message = err instanceof Error ? err.message : String(err);

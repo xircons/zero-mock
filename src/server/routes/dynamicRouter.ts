@@ -210,25 +210,32 @@ function asyncHandler(
 
 export function buildDynamicRouter(): Router {
   const router = express.Router();
-  const resources = Object.keys(JsonStore.getData());
 
-  for (const resource of resources) {
-    router.get(
-      `/${resource}/:id`,
-      asyncHandler(async (req: Request, res: Response) => {
-        const { id } = req.params;
-        const collection = JsonStore.getData()[resource];
-        const item = findItemById(collection, id);
-        if (item === undefined) {
-          itemNotFound(res, resource, id);
-          return;
-        }
-        res.json(item);
-      }),
-    );
-
-    router.get(`/${resource}`, (req: Request, res: Response) => {
+  router.get(
+    `/:resource/:id`,
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+      const { resource, id } = req.params;
       const collection = JsonStore.getData()[resource];
+      if (!collection) {
+        return next();
+      }
+      const item = findItemById(collection, id);
+      if (item === undefined) {
+        itemNotFound(res, resource, id);
+        return;
+      }
+      res.json(item);
+    }),
+  );
+
+  router.get(
+    `/:resource`,
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+      const { resource } = req.params;
+      const collection = JsonStore.getData()[resource];
+      if (!collection) {
+        return next();
+      }
       const query = req.query as Record<string, unknown>;
       let rows = filterCollection(collection, query);
       const total = rows.length;
@@ -252,102 +259,115 @@ export function buildDynamicRouter(): Router {
         return;
       }
       res.json(rows);
-    });
+    }),
+  );
 
-    router.post(
-      `/${resource}`,
-      asyncHandler(async (req: Request, res: Response) => {
-        if (!isPlainObject(req.body)) {
-          badBody(res);
-          return;
-        }
-        const collection = JsonStore.getData()[resource];
-        if (!validateBody(res, collection, req.body)) return;
-        const newId = nextIdForCollection(collection);
-        const rawBody = req.body as Record<string, unknown>;
-        const rest: Record<string, unknown> = { ...rawBody };
-        delete rest["id"];
-        const newItem: Record<string, unknown> = { ...rest, id: newId };
-        collection.push(newItem);
-        await JsonStore.save();
-        res.status(201).json(newItem);
-      }),
-    );
+  router.post(
+    `/:resource`,
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+      const { resource } = req.params;
+      const collection = JsonStore.getData()[resource];
+      if (!collection) {
+        return next();
+      }
+      if (!isPlainObject(req.body)) {
+        badBody(res);
+        return;
+      }
+      if (!validateBody(res, collection, req.body)) return;
+      const newId = nextIdForCollection(collection);
+      const rawBody = req.body as Record<string, unknown>;
+      const rest: Record<string, unknown> = { ...rawBody };
+      delete rest["id"];
+      const newItem: Record<string, unknown> = { ...rest, id: newId };
+      collection.push(newItem);
+      await JsonStore.save();
+      res.status(201).json(newItem);
+    }),
+  );
 
-    router.put(
-      `/${resource}/:id`,
-      asyncHandler(async (req: Request, res: Response) => {
-        if (!isPlainObject(req.body)) {
-          badBody(res);
-          return;
-        }
-        const { id: idParam } = req.params;
-        const collection = JsonStore.getData()[resource];
-        if (!validateBody(res, collection, req.body)) return;
-        const index = findIndexById(collection, idParam);
-        if (index === -1) {
-          itemNotFound(res, resource, idParam);
-          return;
-        }
-        const previous = collection[index];
-        const preservedId = isRecordWithId(previous) ? previous.id : idParam;
-        const rawBody = req.body as Record<string, unknown>;
-        const rest: Record<string, unknown> = { ...rawBody };
-        delete rest["id"];
-        const updated: Record<string, unknown> = { ...rest, id: preservedId };
-        collection[index] = updated;
-        await JsonStore.save();
-        res.json(updated);
-      }),
-    );
+  router.put(
+    `/:resource/:id`,
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+      const { resource, id: idParam } = req.params;
+      const collection = JsonStore.getData()[resource];
+      if (!collection) {
+        return next();
+      }
+      if (!isPlainObject(req.body)) {
+        badBody(res);
+        return;
+      }
+      if (!validateBody(res, collection, req.body)) return;
+      const index = findIndexById(collection, idParam);
+      if (index === -1) {
+        itemNotFound(res, resource, idParam);
+        return;
+      }
+      const previous = collection[index];
+      const preservedId = isRecordWithId(previous) ? previous.id : idParam;
+      const rawBody = req.body as Record<string, unknown>;
+      const rest: Record<string, unknown> = { ...rawBody };
+      delete rest["id"];
+      const updated: Record<string, unknown> = { ...rest, id: preservedId };
+      collection[index] = updated;
+      await JsonStore.save();
+      res.json(updated);
+    }),
+  );
 
-    router.patch(
-      `/${resource}/:id`,
-      asyncHandler(async (req: Request, res: Response) => {
-        if (!isPlainObject(req.body)) {
-          badBody(res);
-          return;
-        }
-        const { id: idParam } = req.params;
-        const collection = JsonStore.getData()[resource];
-        if (!validateBody(res, collection, req.body)) return;
-        const index = findIndexById(collection, idParam);
-        if (index === -1) {
-          itemNotFound(res, resource, idParam);
-          return;
-        }
-        const current = collection[index];
-        if (!isPlainObject(current)) {
-          res.status(400).json({ error: "Existing item must be an object to PATCH." });
-          return;
-        }
-        const preservedId = isRecordWithId(current) ? current.id : idParam;
-        const rawBody = req.body as Record<string, unknown>;
-        const patch: Record<string, unknown> = { ...rawBody };
-        delete patch["id"];
-        const updated: Record<string, unknown> = { ...current, ...patch, id: preservedId };
-        collection[index] = updated;
-        await JsonStore.save();
-        res.json(updated);
-      }),
-    );
+  router.patch(
+    `/:resource/:id`,
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+      const { resource, id: idParam } = req.params;
+      const collection = JsonStore.getData()[resource];
+      if (!collection) {
+        return next();
+      }
+      if (!isPlainObject(req.body)) {
+        badBody(res);
+        return;
+      }
+      if (!validateBody(res, collection, req.body)) return;
+      const index = findIndexById(collection, idParam);
+      if (index === -1) {
+        itemNotFound(res, resource, idParam);
+        return;
+      }
+      const current = collection[index];
+      if (!isPlainObject(current)) {
+        res.status(400).json({ error: "Existing item must be an object to PATCH." });
+        return;
+      }
+      const preservedId = isRecordWithId(current) ? current.id : idParam;
+      const rawBody = req.body as Record<string, unknown>;
+      const patch: Record<string, unknown> = { ...rawBody };
+      delete patch["id"];
+      const updated: Record<string, unknown> = { ...current, ...patch, id: preservedId };
+      collection[index] = updated;
+      await JsonStore.save();
+      res.json(updated);
+    }),
+  );
 
-    router.delete(
-      `/${resource}/:id`,
-      asyncHandler(async (req: Request, res: Response) => {
-        const { id: idParam } = req.params;
-        const collection = JsonStore.getData()[resource];
-        const index = findIndexById(collection, idParam);
-        if (index === -1) {
-          itemNotFound(res, resource, idParam);
-          return;
-        }
-        collection.splice(index, 1);
-        await JsonStore.save();
-        res.status(204).send();
-      }),
-    );
-  }
+  router.delete(
+    `/:resource/:id`,
+    asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+      const { resource, id: idParam } = req.params;
+      const collection = JsonStore.getData()[resource];
+      if (!collection) {
+        return next();
+      }
+      const index = findIndexById(collection, idParam);
+      if (index === -1) {
+        itemNotFound(res, resource, idParam);
+        return;
+      }
+      collection.splice(index, 1);
+      await JsonStore.save();
+      res.status(204).send();
+    }),
+  );
 
   return router;
 }
