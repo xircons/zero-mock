@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/xircons/zero-mock/compare/v1.2.1...v1.3.0) (2026-06-25)
+
+
+### Features
+
+* **cli:** enhance watch mode and dynamic routing ([36e082a](https://github.com/xircons/zero-mock/commit/36e082ac8b8fed35bed771a81f03109c115cd1f6))
+
 ## [1.2.1](https://github.com/xircons/zero-mock/compare/v1.2.0...v1.2.1) (2026-06-15)
 
 
