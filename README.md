@@ -16,7 +16,7 @@ Built for frontend developers and architects who need a realistic, stable backen
 - **Atomic and secure** — cross-platform atomic writes (Windows-safe) with file-locking to prevent data corruption.
 - **Advanced REST** — supports filtering (`_gte`, `_lte`, `_like`), sorting (`_sort`, `_order`), and pagination (`_page`, `_limit`).
 - **Realistic simulation** — simulate network latency and configure custom CORS origins/methods.
-- **Watch mode** — hot-reloads data from disk on manual file changes without a server restart.
+- **Watch mode** — hot-reloads data from disk on manual file changes without a server restart, including newly added or removed collections.
 - **Session memory** — remembers your last used configuration for a faster workflow.
 
 ---
@@ -64,6 +64,8 @@ zero-mock -f ./data.json -p 8080 -w -d 200
 | `-d`, `--delay` | Delay every request by X milliseconds (default `0`). |
 | `-w`, `--watch` | Enable hot-reloading on manual file changes. |
 | `--cors-origin` | Comma-separated allowed origins (default `*`). |
+| `--cors-methods` | Comma-separated allowed HTTP methods (default `GET,HEAD,PUT,PATCH,POST,DELETE`). |
+| `--cors-credentials` | Allow CORS credentials (cookies, auth headers). |
 | `--reset` | Clear saved wizard configuration and exit. |
 
 ---
@@ -80,6 +82,8 @@ The tool generates full CRUD endpoints for every top-level key in your JSON (e.g
 | `PUT` | `/{resource}/{id}` | Replace item (schema validation). |
 | `PATCH` | `/{resource}/{id}` | Partial update (schema validation). |
 | `DELETE` | `/{resource}/{id}` | Remove item. |
+
+Unknown routes and missing items return a JSON `404` (e.g. `{ "error": "Not found: GET /widgets" }`).
 
 ### Advanced List Features
 
