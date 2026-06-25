@@ -11,6 +11,12 @@
     },
     "lint": {
       "outputs": []
+    },
+    "test": {
+      "dependsOn": ["build"]
+    },
+    "test:coverage": {
+      "dependsOn": ["build"]
     }
   }
 }

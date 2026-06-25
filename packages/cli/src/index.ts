@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as chokidar from "chokidar";
+import path from "path";
 import pc from "picocolors";
 import { Command } from "commander";
 import { JsonStore } from "./store/jsonStore";
@@ -33,6 +34,7 @@ const program = new Command();
 let watcher: chokidar.FSWatcher | null = null;
 
 function startFileWatcher(filePath: string): void {
+  const absolutePath = path.resolve(filePath);
   let reloadTimeout: ReturnType<typeof setTimeout> | null = null;
 
   if (watcher) {
@@ -41,20 +43,33 @@ function startFileWatcher(filePath: string): void {
   }
 
   const reload = async (): Promise<void> => {
+    // Skip events caused by our own save().
+    if (JsonStore.isSelfWrite()) {
+      return;
+    }
     try {
-      await JsonStore.load(filePath, true);
-      console.log(`\n  ${pc.dim('│')}  ${pc.green('✓')} ${pc.dim('Hot reloaded data from')} ${pc.white(filePath)}`);
+      await JsonStore.load(absolutePath, true);
+      console.log(`\n  ${pc.dim('│')}  ${pc.green('✓')} ${pc.dim('Hot reloaded data from')} ${pc.white(absolutePath)}`);
     } catch (err: any) {
       printError('WATCH_RELOAD_FAILED', err.message);
     }
   };
 
   try {
-    watcher = chokidar.watch(filePath, { persistent: true, ignoreInitial: true });
+    watcher = chokidar.watch(absolutePath, { 
+      persistent: true, 
+      ignoreInitial: true,
+      awaitWriteFinish: {
+        stabilityThreshold: 100,
+        pollInterval: 50
+      }
+    });
     watcher
-      .on("change", () => {
-        if (reloadTimeout) clearTimeout(reloadTimeout);
-        reloadTimeout = setTimeout(() => void reload(), 100);
+      .on("all", (event) => {
+        if (event === "change" || event === "add") {
+          if (reloadTimeout) clearTimeout(reloadTimeout);
+          reloadTimeout = setTimeout(() => void reload(), 100);
+        }
       })
       .on("error", (err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);

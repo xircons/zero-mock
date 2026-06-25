@@ -41,7 +41,11 @@ export function createApp(options: CreateAppOptions): Application {
   app.use(express.json());
   app.use(requestLoggingMiddleware);
   app.use(delayMiddleware(options.delayMs));
+  // Catch-all `/:resource` routes — mount any reserved endpoint above this line.
   app.use("/", buildDynamicRouter());
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({ error: `Not found: ${req.method} ${req.path}` });
+  });
   app.use(errorHandler);
   return app;
 }
